@@ -1,0 +1,109 @@
+; all the munchman monsters (hoonos)
+; from grom 0cd4
+; there are 20 monsters with 8 patterns each.
+	 
+; ENGLISH    JAPANESE	 
+;
+; pinwheel   kazaguruma  風車
+; bumpercar  banpa-sha   バンパー車
+; owl        fukuro     ふくろう
+; grape      gurepu     グレープ
+; pumpkin    kabocha    かぼちゃ
+; droid      doroido    ドロイド
+; dust       hokori     ほこり
+; birds      tori       鳥
+; lawnmower  Shibakariki  芝刈り機
+; tornado    Tatsumaki   竜巻
+; jack       Jakku      ジャック
+; dick       Dikku       ディック squid Ika いか
+; spring     Haru        春
+; monkey     Monkī    モンキー  Chinpanjī  チンパンジー
+; comb       Kushi      櫛
+; hat        Bōshi   帽子
+; goal       Kaisatsu    改札
+; bee        Hachi        蜂
+; chinese    Chūgokujin  中国人
+; mine       Jiraigen 地雷原  Hoshi 星
+
+
+hoonos equ $
+      data >62b9,>3f6a,>7ee4,>9d46,>c7a1,>be2a,>3c7d,>85e3  ; kazaguruma
+      data >1ec2,>bca9,>bdbd,>4378,>785b,>3deb,>ffa4,>ca0e
+      data >62b9,>3f6a,>7ee4,>9d46,>c7a1,>be2a,>3c7d,>85e3
+      data >1ec2,>bca9,>bdbd,>4378,>785b,>3deb,>ffa4,>ca0e
+      data >1824,>3c18,>7eff,>7e24,>1824,>3c18,>7eff,>7e24  ; banpa-sha
+      data >0018,>243c,>187e,>ff7e,>0018,>243c,>187e,>ff7e
+      data >1824,>3c18,>7eff,>7e24,>1824,>3c18,>7eff,>7e24
+      data >1824,>3c7e,>ff7e,>2424,>1824,>3c7e,>ff7e,>2424
+      data >aa7f,>da5b,>fe43,>fe55,>aa7f,>da5b,>fe43,>fe55  ; fukuro
+      data >55fe,>5bda,>7fe6,>7faa,>55fe,>5bda,>7fe6,>7faa
+      data >aa7f,>da5b,>fe67,>fe55,>aa7f,>da5b,>fe67,>fe55
+      data >55fe,>5bda,>7ffe,>7faa,>55fe,>5bda,>7ffe,>7faa
+      data >7eff,>c3c3,>ffff,>ff7e,>7eff,>c3c3,>ffff,>ff7e  ; gurepu
+      data >007e,>7e42,>7e7e,>7e00,>007e,>7e42,>7e7e,>7e00
+      data >003c,>7e66,>7e7e,>3c00,>003c,>7e66,>7e7e,>3c00
+      data >0000,>3c24,>3c3c,>0000,>0000,>3c24,>3c3c,>0000
+      data >7edb,>ffa5,>8181,>a57e,>7edb,>ffa5,>8181,>a57e
+      data >7edb,>ffa5,>81a5,>7e00,>7edb,>ffa5,>81a5,>7e00
+      data >7edb,>ffa5,>a57e,>0000,>7edb,>ffa5,>a57e,>0000
+      data >7edb,>ffa5,>81a5,>7e00,>7edb,>ffa5,>81a5,>7e00
+      data >3c7e,>ff00,>5500,>2a00,>3c7e,>ff08,>2040,>0400
+      data >3c7e,>ff00,>3904,>0024,>3c7e,>ff00,>5201,>2a10
+      data >3c7e,>ff28,>4000,>4200,>3c7e,>ff00,>3904,>0024
+      data >3c7e,>ff08,>2040,>0400,>3c7e,>ff00,>0000,>0000
+      data >1006,>8821,>9802,>2418,>0826,>4483,>2452,>0610
+      data >045a,>81b4,>214a,>6c08,>300c,>53c8,>0b64,>320c
+      data >1006,>8821,>9804,>4218,>0824,>4483,>2452,>0210
+      data >045a,>81b4,>214a,>6c08,>3008,>53c8,>0b64,>120c
+      data >0000,>183c,>7ec3,>8181,>0000,>183c,>ffc3,>8100
+      data >0000,>0018,>7eff,>8100,>0000,>0018,>dbff,>2400
+      data >0000,>8199,>db7e,>2400,>0000,>18db,>ff24,>0000
+      data >0000,>187e,>ff81,>0000,>0000,>183c,>ffc3,>8100
+      data >1818,>1818,>1818,>1818,>c060,>3018,>180c,>0603
+      data >0000,>00ff,>ff00,>0000,>0c06,>0318,>18c0,>6030
+      data >1818,>1818,>1818,>1818,>c060,>3018,>180c,>0603
+      data >0000,>00ff,>ff00,>0000,>0c06,>0318,>18c0,>6030
+      data >fc78,>381c,>0c04,>0408,>fc7c,>381c,>0c06,>0204
+      data >7c78,>1c18,>0c04,>0408,>7c78,>1c1c,>1810,>0804
+      data >7e78,>1c38,>1810,>1008,>7e78,>1c1c,>1810,>0804
+      data >7e78,>1c18,>0c04,>0408,>fc7c,>381c,>0c06,>0204
+      data >c37e,>3c18,>183c,>7ec3,>00ff,>3c18,>183c,>ff00
+      data >003c,>ff18,>18ff,>3c00,>003c,>3cff,>ff3c,>3c00
+      data >003c,>3cff,>ff3c,>3c00,>003c,>ff18,>18ff,>3c00
+      data >00ff,>3c18,>183c,>ff00,>c37e,>3c18,>183c,>7ec3
+      data >183c,>7e3c,>1818,>183c,>183c,>7e3c,>1818,>183c
+      data >183c,>7e3c,>1818,>183c,>183c,>7e3c,>1818,>183c
+      data >0018,>3c7e,>3c18,>a542,>0018,>3c7e,>3c18,>a542
+      data >0018,>3c7e,>3c18,>a542,>0018,>3c7e,>3c18,>a542
+      data >ff40,>7c20,>3c10,>1800,>00ff,>407c,>203c,>1018
+      data >0000,>ff40,>7c20,>3c18,>0000,>00ff,>027c,>3c3c
+      data >0000,>0000,>ff7c,>7c3c,>0000,>00ff,>087c,>7c3c
+      data >0000,>ff04,>7c00,>3c3c,>00ff,>027c,>043c,>0818
+      data >1c3c,>3731,>5289,>8545,>1c3c,>3731,>5289,>9545
+      data >1c3c,>3731,>3152,>4a4a,>1c3c,>3731,>3152,>4a4a
+      data >1c3c,>3652,>3251,>5192,>1c3c,>3652,>3251,>5192
+      data >3878,>6662,>9192,>9261,>3878,>6662,>9192,>9261
+      data >ff18,>ff18,>ff18,>ff18,>18ff,>18ff,>18ff,>18ff
+      data >7e18,>7e18,>7e18,>7e18,>187e,>187e,>187e,>187e
+      data >3c18,>3c18,>3c18,>3c18,>183c,>183c,>183c,>183c
+      data >1818,>1818,>1818,>1818,>1818,>1818,>1818,>1818
+      data >3c3c,>3c3c,>ffff,>0000,>3c3c,>3c3f,>3ff0,>f000
+      data >3c3c,>3f3f,>3030,>f0f0,>3c3c,>3c3f,>3ff0,>f000
+      data >3c3c,>3c3c,>ffff,>0000,>3c3c,>3cfc,>fc0f,>0f00
+      data >3c3c,>fcfc,>0c0c,>0f0f,>3c3c,>3cfc,>fc0f,>0f00
+      data >8181,>8181,>8181,>7e3c,>4242,>4242,>4242,>7e3c
+      data >2424,>2424,>2424,>1818,>1818,>1818,>1818,>1818
+      data >1010,>1010,>1010,>1010,>1818,>1818,>1818,>1818
+      data >2424,>2424,>2424,>1818,>4242,>4242,>4242,>7e3c
+      data >18bd,>5a3c,>3c18,>183c,>183c,>18ff,>3c18,>183c
+      data >0018,>3c18,>3cff,>183c,>0000,>183c,>183c,>7ebd
+      data >0018,>3c18,>3cff,>183c,>183c,>18ff,>3c18,>183c
+      data >18bd,>5a3c,>3c18,>183c,>997e,>3c3c,>1818,>3c00
+      data >003c,>ff7e,>0000,>0303,>003c,>ff7e,>c0c0,>0000
+      data >003c,>ff7e,>00c0,>c000,>003c,>ff7e,>3030,>0000
+      data >003c,>ff7e,>0000,>3030,>003c,>ff7e,>0c0c,>0000
+      data >003c,>ff7e,>0000,>0c0c,>003c,>ff7e,>0303,>0000
+      data >0838,>fc7c,>7e38,>2000,>2038,>7e7c,>fc38,>0800
+      data >0008,>38fc,>7c7e,>3820,>0020,>387e,>7cfe,>3808
+      data >0004,>1c7e,>3e3f,>1c10,>0010,>1c3f,>3e7e,>1c04
+      data >041c,>7e3e,>3f1c,>1000,>101c,>3f3e,>7e1c,>0400

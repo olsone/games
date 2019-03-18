@@ -1,0 +1,6 @@
+	DEF START
+start	lwpi >83e0
+L0	li r0,>a000
+	clr *r0+
+	jmp l0
+	end

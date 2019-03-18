@@ -1,0 +1,373 @@
+; music player adapted from FORTI
+;
+; this assembly version by Erik Olson
+;
+; http://atariage.com/forums/topic/278460-may-the-forth-musical-offering-forti-decompiled/
+
+
+SOUND EQU >8400
+
+; MIDI notes:
+; general MIDI standardized 60 as middle C.
+; >3c = 60 = middle C
+; we will use general MIDI note numbers here.
+
+; song: coda.mid:
+; track 6 uses notes 57 to 76
+; track 7 uses notes 51 to 69
+; total range 51 to 76
+
+
+; voice format: 
+;    note#, duration
+;
+; keep original note#s from midi - adjust pitch table to line up.
+;
+; use durations from FORTI.
+;
+; 192 is a whole note
+; 48 is a quarter note
+; 32 is a quarter note triplet (3 in 2 beats)
+; 24 is an eighth note
+; 16 is an eights note triplet
+; 12 is a sixteenth note
+; 6 is a 32nd note
+; 3 is a 64th note
+;
+; compare MIDI time base with default division=120 meaning quarter note = 120
+; 120 is 2*2*2*3*5 so it doesn't divide past 32nd note 
+;  48 is 2*2*2*2*3 so it divides into 64ths
+
+; MIDI FORTI
+;  480   192 whole note, fits in 1 byte
+;  120    48 quarter note
+;   80    32 quarter note triplet (3 in 2 beats)
+;   60    24 eighth note
+;   40    16 eighth note triplet
+;   30    12 sixteenth note
+;   15     6 32nd note
+;    7.5   3 64th note
+;
+; special: duration of 255 means add next word to duration. (at most 11 bits of the word)
+; to tie 192+192, use 255 then 129.
+
+; rate of time can be altered by @DEL function (ticks are not necessary 1/60 second)
+; (higher is faster). 
+; neutral value of DEL is 32. 
+; in MUSICX, durations are effectively scaled by 32/DEL.
+;
+
+; 
+; TODO: note with high bit set = chord. allocate to unused voice as 1 note line.
+; this would allow convenient entry and save the need to keep track of time in mostly
+; unused channels.
+;
+; Pitch Table
+;
+; Common pitch table, values from E/A manual, as low as MIDI 45 or A2, 110 Hz. 
+; Two octaves are duplicated below A2. So the first entry is A0 27.5 Hz or MIDI 21.
+; PT0 Address is offset to align with MIDI note number 0. 
+; dereferencing note 0 will return undefined. don't do it!
+pt0 equ $-42       ; hey, FORTI-2
+ data >93f,>03c,>a38,>735,>732,>a2f,>f2c,>72a,>128,>d25,>b23,>b21  ; A0 (110 Hz) MIDI 21
+ data >93f,>03c,>a38,>735,>732,>a2f,>f2c,>72a,>128,>d25,>b23,>b21  ; A1 (110 Hz) MIDI 33
+ data >93f,>03c,>a38,>735,>732,>a2f,>f2c,>72a,>128,>d25,>b23,>b21  ; A2  110 Hz  MIDI 45
+ data >c1f,>01e,>51c,>c1a,>419,>d17,>816,>315,>014,>e12,>d11,>d10  ; A3  220 Hz  MIDI 57
+ data >e0f,>00f,>20e,>60d,>a0c,>e0b,>40b,>a0a,>00a,>709,>f08,>708  ; A4  440 Hz  MIDI 69
+ data >f07,>807,>107,>b06,>506,>f05,>a05,>505,>005,>c04,>704,>304  ; A5  880 Hz  MIDI 81
+ 
+; pt1 bass notes, the tuned frequencies for voice 3 coupled with the periodic noise
+
+; pt4 the percussion
+pt4 
+ data >e7e7,>e7e7,>e7e7,>e7e7 
+; unfinished
+
+
+; tail size,attn bytes,cmd byte .. 64 bytes
+ 
+CHORO
+ORGAN3 byte 0,4,5,6,7,8,7,6,5,>81
+BEAT   byte 0,3,7,9,11,11,11,7,>80
+NANA1  byte 0
+       byte 6,6,6,6,5,5,5,5
+       byte 4,4,4,4,3,3,3,3   
+	   byte 4,4,4,4,5,5,5,5
+	   byte 6,6,6,6,7,7,7,7
+	   ; loop:
+	   byte >99
+NANAT  byte 7           ; tail length
+       byte 7,6,5
+       byte 6,7,6
+       byte 7,>86
+	   bss  48          ; dead space
+; tail
+       byte 8,9,10,11,12,13,14
+; ping
+NANA   byte 0
+       byte 7,8,9,10,11,12,13,14
+       byte >88	   
+	   
+; chariots of fire trumpet
+CORNI1 byte 0
+       byte 14,14,14,13,13,13,13,12,12,12,12
+       byte 11,11,11,11,10,10,10,10,9,9,8,8
+	   byte 7,7,6,6,5,5,4,4,3,2,2,3
+	   byte 4,4,5,5,6,6,7,7,7,7,7,7,7
+	   byte 7,7,7,7,8,8
+	   byte 2,3,4,4,5,5,6,6
+	   byte 7,7,7,7,7,7,7,7,7,7
+	   byte 8,8,8,8,8,8,8,8
+	   byte 9,9,9,9,9,9,9,9
+	   byte 10,10,10,10,10,10,10,10
+	   byte 11,11,11,11
+	   byte 12,12,12,12,12,12,12,12,12,12,12,12,12,12
+	   byte 13,13,13,13
+	   byte 14,14,14,14,14,14,14,14,14,14,14,14
+	   byte 15,15,>80
+	   
+; Register usage:
+; FORTI WS usage. WS is a register workspace
+; ------------------------
+;  R0 voice or cascade addr. List of byte pairs (note#,dur)
+;  R1 pitch-table: e.g. PT0 or PT1
+;  R2 envelope. e.g. PLUCK3 or ORGAN2
+;  R3 index into envelope
+;  R4 countdown timer to next note. init to 0 to begin.
+;  R5 const pitch cmd byte
+;  R6 const attn  cmd byte (for a noise, pitch is tone#3 and attn is tone#4/noise)
+;  R7 pitch cmd word for current note or 0 for rest
+;  R8  
+;  R9  
+;  R10 copy of SGCA, sound card address (copied from SGCA at each ISR entry, sic)
+;  R11 scratch
+;  R12 cpu ram address of dancing sprite satr bytes
+;  R13 keep for rtwp
+;  R14 keep for rtwp
+;  R15 keep for rtwp
+
+; 
+; ( Register numbers for use in assembling MUSIC - EO )
+; 0 CONSTANT NTP ( Note table / voice pointer )
+; 1 CONSTANT PTS ( pitch table start )
+; 2 CONSTANT ATS ( attenuation table start / envelope )
+; 3 CONSTANT ATP ( attenuation table offset )
+; 4 CONSTANT DUR ( countdown timer duration )
+; 5 CONSTANT PVID ( pitch voice ID )
+; 6 CONSTANT VVID ( volume voice ID )
+; A CONSTANT SG   ( sound card address )  typ  85EE(#1 chip)
+; C CONSTANT PNDX ( satr cpu ram pointer )
+; ( D E F are clobbered on entry to MUSIC but could be temps )
+;
+
+; register names
+NTP EQU 0
+PTS EQU 1
+ATS EQU 2
+ATP EQU 3
+DUR EQU 4
+PVID EQU 5
+VVID EQU 6
+
+SG   EQU 10
+PNDX EQU 12
+
+; current dynamic level. this should be a register!
+DYN  data 16
+;
+DEL  data >38       ; the default value for tempo. >20 is neutral. 24 ticks is 24 * 1/60th second.
+SPC  data 0
+WSP  data 13
+
+; 48 byte attn table to map the raw attn to create dynamics. 
+DYT  byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+     byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,14
+	 byte 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
+
+; 3 voice player:
+MUSWS1 bss 32
+MUSWS2 bss 32
+MUSWS3 bss 32
+
+; Reset voices and timers
+PLAY
+	lwpi MUSWS1
+	li   NTP,VOICE1
+	li   PTS,PT0
+	li   ATS,NANA
+	clr  DUR
+	li   PVID,>8000
+	li   VVID,>9000
+	li   SG,SOUND
+	li   PNDX,SATRB+8
+
+	lwpi MUSWS2
+	li   NTP,VOICE2
+	li   PTS,PT0
+	li   ATS,NANA
+	clr  DUR
+	li   PVID,>a000
+	li   VVID,>b000
+	li   SG,SOUND
+	li   PNDX,SATRB+12
+
+	lwpi MUSWS3
+	li   NTP,VOICE3
+	li   PTS,PT0
+	li   ATS,CHORO
+	clr  DUR
+	li   PVID,>c000
+	li   VVID,>d000
+	li   SG,SOUND
+	li   PNDX,SATRB+16
+	
+	lwpi VDPWS
+	rt
+	
+; to initialize:
+;   bl   @play
+; to give 1 unit of time:
+;   BLWP @MUSIC1
+;   BLWP @MUSIC2
+;   BLWP @MUSIC3
+	
+; or original FORTH style
+;   bl   @play
+;
+;   li   r0,MUSWS1
+;   bl   @MUSIC
+;   li   r0,MUSWS2
+;   bl   @MUSIC
+;   li   r0,MUSWS3
+;   bl   @MUSIC
+MUSIC
+	li   r1,MUSICX
+	blwp R0               effect is R0->WP R1->PC. no LWP on 9900
+	rt                    FORTH: B *NEXT
+;
+; standard non-tricky way:
+;
+MUSIC1 DATA MUSWS1,MUSICX
+MUSIC2 DATA MUSWS2,MUSICX
+MUSIC3 DATA MUSWS3,MUSICX
+
+
+MUSICX
+	mov  R4,R4            duration timer. clear to start
+	jgt  label2
+label0
+; new note
+	clr  R7
+	movb *R0+,R7          get new note number*2 in R7
+	swpb r7
+	sla  r7,1             note# * 2
+
+; dancing sprite col
+	mov  R7,r11           get note number*2 in R11
+	jeq  $+6
+	ai   R11,-96          ; get it in left visible area if not 0
+    ab   *r12,r11         ; append the y coord
+	mov  r11,*r12         ; update x,y
+
+; new duration
+	clr  r8
+	movb *R0+,R8          get new duration in r8
+	jeq  finis
+
+; special case: duration=255. add next word duration too
+	ci   r8,>ff00
+	jne  du0
+	swpb r8
+	a   *r0+,r8           ; assume up to 11 bits of duration (or at least note 0)
+	sla  r8,5
+	jmp  du1
+	
+du0 srl  R8,3             times 32 .  32 is the neutral value of DEL
+du1	a    R8,R4            add, not mov, because time can go negative not just 0
+
+; bugfix: if R4 is at worst 1-DEL, R8 is at worst 32, if R8<DEL-1 then music may stall.
+; this could happen while playing 64th trills at faster than average tempo
+    jlt  label0
+	
+	jmp  label1
+	
+; 0 duration terminates the sound list
+finis
+	dect R0               leave R0 pointing to the last (valid) note
+	li   R8,>0f00         silence
+	a    R6,R8            attn cmd byte
+
+	movb R8,*R10          write to sound chip
+	clr  r4               guard against tempo 
+	rtwp
+label1
+    mov  r7,r7
+	jeq  rest             if note# is 0, it's a rest
+	a    R1,R7            pitch table address
+	mov  *R7,R7
+	jne  note             if pitch table has a 0, it's a rest
+rest
+	li   R8,>0f00         silence
+	a    R6,R8            attn cmd byte
+	movb R8,*R10          write to sound chip
+	li   r11,>f800        sprite character empty
+	movb r11,@2(r12)
+	jmp  label6           why was it label2 from forth? probably the structured assembly
+note
+	a    R5,R7            pitch cmd byte
+	movb R7,*R10          write to sound chip
+	swpb R7
+	movb R7,*R10          write to sound chip
+	clr  R3
+* note in progress
+label2
+	mov  R7,R7            pitch cmd or 0 if none
+	jeq  label6           nothing to do
+	clr  r8               ; TODO don't recompute size of tail every time
+	movb *R2,R8           envelope first byte (N bytes in tail)
+	jeq  label4           no tail
+	srl  R8,3
+	c    R8,R4            R4 is counting down from duration*32
+	jgt  label3
+tail
+	li   R3,>003f         start envelope at 3fh-R8
+	srl  r8,5
+	s    R8,R3
+label3
+	ci   R3,>003f
+	jlt  label4
+	li   R3,>003e         R3 max 3F
+label4
+	inc  R3               at least 1
+	mov  R3,R8
+	a    R2,R8            envelope  pointer in R8
+	movb *R8,R8
+	jgt  label5
+	jeq  label5
+; >80 indicates a command
+; envelope cmd	byte
+envjmp
+    srl  r8,8
+	ai   R8,->81
+	mov  R8,R3            new envelope index in R3
+	jmp  label4
+	
+* R8 msb is attn
+label5
+; sprite pat
+	li   r11,>e101        ; (attn#+1)/2 -> pat, +>f0
+	ab   r8,r11
+	src  r11,1
+	movb r11,@2(r12)
+	
+* adjust attn by dynamics table
+	srl  R8,8             
+	a    @DYN,r8
+	movb @DYT(R8),R8
+
+;	srl  R8,2             ; why was this in chariots? dyn table is already 4 bits
+	ab   R6,R8            add attn cmd byte
+	movb R8,*R10          write to sound chip
+label6
+	s    @DEL,R4        Subtract DEL from timer
+	rtwp

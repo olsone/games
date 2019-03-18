@@ -1,0 +1,360 @@
+;
+;
+; init maze:
+;  bl @newrow 9 times
+; each 16 ticks, bl @newrow again to refill chrbuf
+
+; tile bits:
+; 00 unused (empty?)
+; 01 __
+; 10 |
+; 11 |_
+
+; 
+; defn: tiles are 3x3 chars
+; 21x18 chars
+; 21 rows are needed so that we can scroll 48 pixels which is even, for even/odd frames flipping
+; even frames redefine chars 80-83, odd frames use chars 84-87, in the SIT (namtbl).
+
+tilbuf data 0,0,0     ; current tile row  1x6 tiles
+chrwid equ  18
+chrhgt equ  21
+chrsiz equ  chrwid*chrhgt
+chrbuf bss  chrsiz  ; chars for maze
+
+;
+;
+; NEWROW
+;
+; generate a new row of maze tiles in tilbuf.
+; move everything down 3 rows in chrbuf.
+; generate 3 new rows of chars at the top of chrbuf.
+;
+; finally set MAZROW to 24
+; so that the effect of drawing with MAZROW=24 should match MAZROW=0
+;
+; call NEWROW after drawing the image for MAZROW=1
+;
+;
+; register usage: r0 to r7
+
+newrow:
+       mov  r11,r10
+newroz:                      ; chained entry point with r10 already set up
+; fill tilbuf with random 0-3
+	   li   r1,tilbuf
+	   li   r2,6
+newro0:
+       mov  r13,r3
+;       andi r3,>0303
+       li r3,>0303 ; fudge
+	   mov  r3,*r1+
+
+	   bl   @rng
+	   dect r2
+	   jne  newro0
+	   
+; newrow
+; move chars down
+
+       li   r0,chrbuf+chrsiz-(3*chrwid)
+	   li   r1,chrbuf+chrsiz
+	   li   r2,chrsiz-(3*chrwid)
+	   
+newro1 dect r1
+       dect r0
+	   mov  *r0,*r1
+	   dect r2
+	   jne  newro1
+	   
+; write chars
+; version 1 boring: there are 2 chars that don't scroll well
+; >80 plus bits:
+; 00 space with space below
+; 01 space with block below
+; 10 block with space below
+; 11 block with block below
+; version 2 nicer: there are 16 char combinations ready for scrolling
+
+; r3 bits:
+; 00 block
+; 01 __
+; 10 |
+; 11 |_
+
+; tiles -> chars
+; 00
+; 83 83 83
+; 83 83 83
+; 82 82 82 plus 0 or 1 from testing >02 bit of row below
+
+; 01 __
+; 83 83 83
+; 82 82 82
+; 80 80 80 plus 0 or 1 from testing >02 bit of row below
+
+; 10 |
+; 80 83 83
+; 80 83 83
+; 80 82 82 plus 0 or 1 from testing >02 bit of row below
+
+; 11 |_
+; 80 83 83
+; 80 82 82
+; 80 80 80 plus 0 or 1 from testing >02 bit of row below
+
+; fill with 83
+; constants
+       li   r1,>0100
+	   li   r2,>0200
+	   li   r5,>8000
+	   li   r6,>8300
+	   clr  r7           ; tile bits for coc dst (there is no cocb r2,*r3)
+; register usage
+bufreg equ   3
+tilreg equ   0
+; first row of chrbuf
+       li   bufreg,chrbuf
+; loop over tilbuf
+       li   tilreg,tilbuf
+	   li   r4,6
+tiro10 movb *tilreg+,r7
+; first byte
+tiro11 coc  2,r7
+	   jne  tiro12
+	   movb r5,*bufreg+   ; >80 case
+	   jmp  tiro13
+tiro12 movb r6,*bufreg+	  ; >83 case
+; second byte
+tiro13 movb r6,*bufreg+   ; >83
+; third byte
+       movb r6,*bufreg+   ; >83
+	   
+	   dec  r4
+	   jne  tiro10
+	   
+; second row of chrbuf
+       li   bufreg,chrbuf+chrwid
+	   
+; loop over tilbuf
+	   li   r4,6
+	   s    r4,tilreg
+tiro20 movb *tilreg+,r7
+; first byte
+tiro21 movb r5,*bufreg  ; base of >80
+       coc  2,r7
+	   jeq  tiro22
+	   ab   2,*bufreg  ; set to >82
+       coc  1,r7
+	   jeq  tiro22
+	   ab   1,*bufreg  ; set to >83
+	 
+; second byte
+tiro22 inc  bufreg
+       movb r6,*bufreg	  ; base of 83
+       coc  2,r7
+	   jne  tiro23
+       sb   1,*bufreg     ; >82
+; third byte
+tiro23 inc  bufreg
+       movb r6,*bufreg	  ; base of 83
+       coc  2,r7
+	   jne  tiro24
+       sb   1,*bufreg     ; >82
+tiro24 inc  bufreg
+	   dec  r4
+	   jne  tiro20
+	   
+; third row of chrbuf.
+
+
+       li   bufreg,chrbuf+chrwid+chrwid
+	   
+; loop over tilbuf
+	   li   r4,6
+	   s    r4,tilreg
+; first byte
+tiro30 movb *tilreg+,r7
+tiro31 movb r5,*bufreg  ; base of >80
+       coc  1,r7
+	   jeq  tiro32
+       coc  2,r7
+	   jeq  tiro32
+	   ab   2,*bufreg   ; set to >82 if both bits of tile are not set
+	 
+; second byte
+tiro32 inc  bufreg
+       movb r5,*bufreg	  ; base of 80
+       coc  1,r7
+	   jeq  tiro33
+       ab   2,*bufreg     ; >82 if low bit not set
+; third byte same as second byte
+tiro33 movb *bufreg+,r6   ; 2nd byte destroys constant in r6 not used in this row
+       movb r6,*bufreg+   ; write 3rd byte
+
+	   dec  r4
+	   jne  tiro30
+	   
+; special: add bit 1 of the next row back onto row 3, our bit 0 (whats next)
+tiro40 li   r4,chrwid
+       
+tiro41 movb *bufreg,r7          ; used to be tile#, now plain char#
+       coc  2,r7
+	   jne  tiro42
+	   ab   1,@-CHRWID(BUFREG)          ; 
+tiro42 inc  bufreg
+       dec  r4
+	   jne  tiro41
+
+; reset row counter
+	   li   r4,24
+	   mov  r4,@MAZROW
+	   
+       b    *r10	   
+
+MAZROW data 0         ; counter. 0-15 indicate pixel index; >>3 is row index into chrbuf (mpy by 18)
+MAZR11 data 0         ; save r11
+; DRAMAZ
+; increment mazrow
+; copy maze chars into namtbl
+;
+; call DRAMAZ each tick. in this primitive form it only changes the graphics each 8 ticks.
+; each 8 ticks, update the namtbl  (256 bytes at 16 addresses)
+; each 1 tick, update the 4 chardefs >80 to >83 (32 bytes).
+
+; after 24 ticks, bl @newrow, which refills the chrbuf and clears mazrow.
+;
+; register usage: r0 to r7
+; subroutines: r11,r10
+;
+
+dramaz mov  r11,@mazr11
+       
+; update char patterns first for this frame
+	   
+; update pattbl >80 to >83
+       
+	   li   r0,>4000+pattbl+>400   char >80 in first third
+       mov @mazrow,r1
+       li   r2,8
+	   coc  r2,r1       ; tests for even/odd frame
+	   jne  framev
+	   ; odd
+	   ai   r0,>40      use chars >84-87 for odd frame before updating SIT
+framev
+; make r1 into mazpat + 0-7 line offset
+       andi r1,7
+	   ai   r1,mazpat
+	   
+	   
+	   li   r4,4        outest loop:  pat/col, third of screen,
+dramzc li   r3,4        outer loop: char
+       bl   @setvad
+dramz6 li   r2,8        inner loop
+dramz7 movb *r1+,*vd
+	   dec  r2
+	   jne  dramz7
+	   
+	   ai   r1,8
+	   dec  r3
+	   jne  dramz6      ; next char
+	   
+	   dec  r4
+       jeq  dramz0
+	   ci   r4,2
+	   jne  dramz8
+	   ; switch to coltbl
+	   li   r0,>4000+coltbl+>400
+	   ; r1 is correct
+	   jmp  dramzc
+; second third
+dramz8 ai   r0,>800
+	   ai   r1,-64
+       jmp  dramzc
+ 	   
+; Update SIT last
+	   	   
+dramz0:
+	   mov  @mazrow,r2
+	   li   r7,7
+	   coc  r7,r2        ; test the lower 3 bits for all ones
+	   jne  dramz5       ; no, skip namtbl update 
+	   li   r7,>8
+	   coc  r7,r2        ; even or odd frame
+	   jne  dfrev
+dfrod  li   r7,>0400
+       jmp  dfrrd
+dfrev  clr  r7
+dfrrd
+; r7 is the bits to add to a char for odd frames
+
+; update namtbl
+	   li   r0,>4000+namtbl+8-32    ; row loop pre-adds 32
+	   bl   @setvad
+	   li   r15,VDPWD        ; just in case
+	   li   r1,chrbuf+16-chrwid     ; kludge. chrbuf has wider rows than screen
+	   
+	   srl  r2,3
+	   jeq  dramz1           ; mazrow=0-7. we don't actually draw at 0, instead 24.
+dramzl ai   r1,chrwid        ; mazrow 8-15 one loop, 16-23 two loops, 24 three loops.
+	   dec  r2
+	   jne  dramzl
+	   
+dramz1 li   r3,16            ; outer loop
+dramz2 ai   r0,32
+	   li   r2,16            ; inner loop
+; update r1
+       s    r2,r1
+	   ai   r1,chrwid
+  	   bl   @setvad
+dramz3 movb *r1+,r4
+       ab   r7,r4            ; add odd frame offset
+	   movb r4,*vd
+; carve out a hole for the roller
+       ci   r3,4
+	   jgt  dramz4
+	   ci   r3,1
+	   jeq  dramz4
+	   ci   r2,12
+	   jgt  dramz4
+	   ; after 12
+	   ci   r2,6
+	   jlt  dramz4
+	   ; skip 6 spaces
+	   ai   r0,5+6
+	   bl   @setvad
+	   ai   r0,-(5+6)
+	   ai   r2,-6
+	   ai   r1,6
+	   
+dramz4 dec  r2
+	   jne  dramz3
+	   
+	   dec  r3
+	   jne  dramz2
+	   
+; prepare for next
+dramz5  
+	   
+dramzx dec  @mazrow
+	   jne  dramzz
+	   bl   @newrow      ; sets mazrow to 24. keep buf and screen in sync please
+	   
+dramzz mov @mazr11,r11
+       rt
+
+; crude set of 4 - no scrolling side to side
+; 00 space with space below
+; 01 space with block below
+; 10 block with space below
+; 11 block with block below
+mazpat data 0,0,0,0,0,0,0,0
+       data 0,0,0,0,>aa55,>aa55,>aa55,>aa55
+       data >aa55,>aa55,>aa55,>aa55,0,0,0,0
+       data >aa55,>aa55,>aa55,>aa55,>aa55,>aa55,>aa55,>aa55
+mazcol data >eaea,>eaea,>eaea,>eaea,>eaea,>eaea,>eaea,>eaea  ; grey on yellow space
+       data >eaea,>eaea,>eaea,>eaea,>e5e5,>e5e5,>e5e5,>e5e5  ; grey on blue block
+       data >e5e5,>e5e5,>e5e5,>e5e5,>eaea,>eaea,>eaea,>eaea
+       data >e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5 
+
+

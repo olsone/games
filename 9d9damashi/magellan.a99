@@ -1,0 +1,100 @@
+; Some Magellan loader routines by Erik Olson.  2/24/2019.
+; Free to use by all.
+; 
+; Dependencies: 
+; SETVAD
+; MCOUNT from magellan data file
+;
+; Assumes register #vd = VDPWD
+;
+; There's a tradeoff here.
+; It's convenient to accept the Magellan export as-is, 
+; with the internal pat#s, even though you could optimize them away and save 20% of size.
+; This code favors convenience over data size.
+;
+; Sample usage:
+;      li  r0,PATTBL+>0000 ; vdp table address 
+;      li  r1,PCH0         ; magellan data address
+;      li  r2,48           ; how many chars
+;      bl  @INIMAG
+;      li  r0,CLRTBL+>0000 ; vdp table address 
+;      li  r1,CCH0         ; magellan data address
+;      li  r2,48           ; how many chars
+;      bl  @INIMAG
+;
+;      li  r0,namtbl+>30    ; screen 2,25
+;      bl  @DRAMAP
+;      data 0              ; map#
+
+; INIMAG
+; initialize Magellan bitmap definitions
+; R0 vdp table base address. one of PATTBL+>0000, >0800 or >1000 or CLRTBL+same
+; R1 definition address (CCH0 or PCH0)
+; R2 number of chars
+;
+; uses:
+; R0 scratch
+; R1 increment the heck out of it
+; R2 counted down to zero
+; R3 copy of R0 vdp table address
+; R12 save return address
+;
+	 
+INIMAG mov  r11,r12
+       mov  r0,r3
+       ori  r3,>4000
+INIMA1 mov  *r1+,r0    ; char loop
+       sla  r0,3
+       a    r3,r0
+	   bl   @setvad
+	   li   r0,8
+INIMA2 movb *r1+,*vd    ; vdp write loop
+       dec  r0
+	   jne  INIMA2
+	   dec  r2
+	   jne  INIMA1
+       b    *r12	
+	   
+; DRAMAP draw a Magellan map	   
+; Usage:
+;      li r0,namtbl+>30      ; screen 2,25
+;      bl @dramap
+;      data 0                ; map#
+; input:
+; R0 namtbl address
+; uses:
+; R0  namtbl address scratch
+; R1  map ptr
+; R2  counter #cols
+; R3  constant #cols
+; R4  counter #rows
+; R12 save return address
+
+; find map #
+; magellan writes MC0 data 0 for each map???
+DRAMAP li   r1,mcount
+	   mov  *r1+,r2         ; count of maps
+DRAMA1 c    *r11,*r1+	   
+	   jeq  DRAMA2
+	   inct r1
+	   inct r1
+	   a    *r1+,r1       ; skip this map
+	   dec  r2
+	   jne  drama1
+	   rt                 ; return doing nothing cuz fail
+; copy to namtbl
+DRAMA2 inct r11
+       mov  r11,r12	   
+	   mov  *r1+,r3       ; width
+	   mov  *r1+,r4       ; height
+	   inct r1            ; size (n/a) (na na na na na na!)
+	   ori  r0,>4000
+DRAMA3 bl   @setvad       ; row loop
+       mov  r3,r2
+DRAMA4 movb *r1+,*vd      ; col loop
+	   dec  r2
+	   jne  DRAMA4
+	   ai   r0,32
+	   dec  r4
+	   jne  DRAMA3
+	   b    *r12

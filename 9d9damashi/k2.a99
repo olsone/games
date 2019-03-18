@@ -1,0 +1,379 @@
+	DEF START,K2
+	REF KSCAN
+ 
+VDPRD  EQU  >8800           ; VDP read data
+VDPSTA EQU  >8802           ; VDP status register
+VDPWD  EQU  >8C00           ; VDP write data
+VDPWA  EQU  >8C02           ; VDP set read/write address
+VDPWS  EQU  >8300
+VDPLB0 EQU  >8301
+
+GRMWA  EQU  >9C02
+GRMRD  EQU  >9800
+
+STATUS EQU  >837C
+
+
+* vdp registers for bitmap/G2 mode {m1 m2 m3} = {0 0 1}
+* 00 000000 M3 EV
+* 01 16K BLANK IE M1 M2 0 SIZE MAG
+* 02 0000 NAMTBL
+* 03 COLTBL
+* 04 00000 PATTBL
+* 05 SPRATR
+* 06 SPRPAT
+* 07 FG/BG
+
+* memory map G2
+PATTBL EQU >0000            ; pattern table
+SPRPAT EQU >1800            ; sprite pattern table (defns >80+ available in >1c00 to >1fff)
+NAMTBL EQU >1800            ; name table
+SPRATR EQU >1B00            ; sprite atr table
+COLTBL EQU >2000            ; color table
+
+* define all the vdp registers for G2 mode (bitmap).
+* lsbs of 3 and 4 must be all 1s in G2
+g2regs data >0280,>e081,>0682,>ff83,>0384,>3685,>0386,>1e87
+vreg1b EQU g2regs+2         ; pointer to our VR1 default value
+vreg7b EQU g2regs+14        ; pointer to our VR7 color default value
+
+*
+* SETVAD
+* set vdp address
+* R0 vdp addresss, high bits already set by caller.
+setvad
+	 swpb r0
+	 movb r0,@VDPWA
+	 swpb r0
+	 movb r0,@VDPWA
+	 rt
+
+* INITG2
+* set up G2 (bitmap) mode
+* ---
+* R0,R1,R2 scratch
+* R10 scratch
+* R15 vdpwd
+initg2
+	 mov r11,r10
+	 li r15,VDPWD
+	 li r1,g2regs
+	 li r2,16
+inilp0
+	 movb *r1+,@VDPWA
+	 dec  r2
+	 jne  inilp0
+	 
+	 movb @vreg1b,@>83D4        ; shadow copy of VR1; r10 of INTWS at >83c0
+
+* hide sprites
+	 li r0,>4000+spratr
+	 bl   @setvad
+	 clr  r0
+	 li   r1,>d000
+	 li   r2,32
+inilp1
+	 movb r1,*r15         ; sprite x
+	 movb r1,*r15         ; sprite y
+	 movb r0,*r15         ; sprite pat#
+	 movb r0,*r15         ; sprite color
+	 dec  r2
+	 jne  inilp1
+ 
+* fill name table 3 times
+	 li   r0,>4000+namtbl
+	 bl   @setvad
+	 clr  r1
+	 li   r2,768
+inilp2
+	 movb r1,*r15
+	 ai   r1,>0100
+	 dec  r2
+	 jne  inilp2
+
+* set color table to default=VR7
+	 li   r0,coltbl
+	 mov  @VREG7B,r1
+	 li   r2,>1800
+	 bl   @vmsw
+* clear pattbl
+	 li   r0,pattbl
+	 clr  r1
+	 li   r2,>1800
+	 bl   @vmsw
+
+	 b    *r10 
+
+
+* copy grom to vdp
+* R0 VDP address
+* R1 GROM address
+* R2 length
+* --------
+* Example:
+;  put big capitals character set in 3rd pat tbl, char >80 to >9f
+; 	li   r0,patasc
+;	li   r1,>04b4       ; that's in classic99 grom but not guaranteed
+;	li   r2,>200
+;	bl   @mvgtov
+	
+mvgtov:
+	ori r0,>4000
+	swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+	movb r1,@GRMWA
+	swpb r1
+	movb r1,@GRMWA
+	swpb r1
+mvgvl1:
+	movb @GRMRD,@VDPWD
+	dec  r2
+	jne  mvgvl1
+	rt
+
+* copy 7 byte grom char defs to vdp.
+* assume 06b4 is the char table (seen in classic99 4A grom)
+* they are 7 bytes per char so add a 0 after each 7 bytes
+* R0 VDP address
+* ----
+* R1 scratch
+* R2 scratch
+chara:
+	ori r0,>4000
+	swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+    li  r1,>06b4
+	movb r1,@GRMWA
+	swpb r1
+	movb r1,@GRMWA
+	li   r1,>5f                ; number of char defs
+chara1:
+	movb r1,@VDPWD             ; insert a zero byte
+	li   r2,7                  ; bytes per char def
+chara2:
+	movb @GRMRD,@VDPWD
+	dec  r2
+	jne  chara2
+
+    dec  r1
+	jne  chara1
+	rt
+	
+* write multiple bytes
+vmbw:
+    ori  r0,>4000
+    swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+vmbw1:
+    movb *r1+,@VDPWD
+	dec  r2
+	jne  vmbw1
+	rt
+	
+* write single byte multiple times
+* good for clearing areas
+vmsw:
+    ori  r0,>4000
+    swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+vmsw1:
+    movb r1,*vd
+	dec  r2
+	jne  vmsw1
+	rt
+	
+* write double byte multiple times (r2 is still number of bytes to fill)
+* good for writing checkerboard >aa55
+vmdw:
+    ori  r0,>4000
+    swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+vmdw1:
+    movb r1,*vd
+    swpb r1
+    movb r1,*vd
+    swpb r1
+	dect r2
+	jne  vmdw1
+	rt
+	
+* write string, null terminated
+patasc equ PATTBL+>1500                  ; address to put ascii characters starting with space
+bias   equ >8000                         ; bias to add to ascii chars. 
+space  equ >2000+bias                    ; char code of the space character
+rowbeg equ NAMTBL+>200                   ; address of beginning row
+rowlst equ NAMTBL+>2E0                   ; address of bottom row
+rowend equ NAMTBL+>300                   ; address past bottom row
+
+vstr:
+    ori  r0,>4000
+    swpb r0
+	movb r0,@VDPWA
+	swpb r0
+	movb r0,@VDPWA
+vstr1:
+	movb *r1+,r2
+    jeq  vstr2
+	ai   r2,bias
+    movb r2,*vd
+	inc  r0
+    jmp  vstr1
+vstr2:  
+    rt
+
+* clear last row of screen	
+clrlst:
+    li   r0,rowlst+>4000
+	li   r1,space
+	li   r2,32
+    b    @vmsw
+	
+press text 'Paused-press any key'
+	byte 0
+wedone text 'Done'
+    byte 0
+
+* 83c2: interrupt flags
+* 0 disable interrupt
+* 1 disable sprite motion; 837A is number of sprites to move
+* 2 disable sound processing
+* 3 disable QUIT key
+
+
+
+**************
+* A2 - display word in r4 (4 hex chars to vdpwd).
+* Uses character bias.
+* Doesn't set up vdp address.
+*
+* r1 scratch
+* r2 scratch
+* r4 returned unharmed
+
+HEX text '0123456789ABCDEF'
+	
+a2:
+	li   r2,4
+a2lp:
+	src  r4,12
+	mov  r4,r1
+	andi r1,>f
+	movb @HEX(r1),r1
+	ai   r1,bias
+	movb r1,*vd
+	dec  r2
+	jne  a2lp
+    rt
+
+**************
+* SP4 - write 4 spaces to VDPWD
+**************
+
+sp4:
+    li   r1,space
+	
+    movb r1,*vd
+    movb r1,*vd
+    movb r1,*vd
+    movb r1,*vd
+	rt
+	
+**************
+* debug 
+* shows caller's registers, pc, ws, st. (debug's r12 is shown as 'vd')
+**************
+debug data prws,pr0
+prws   bss 16
+	data >2000	         ; r8 constant
+	data rowlst+>4000    ; r9 screen address
+	data 0                ; r10 ?
+	bss  2                   ; r11 reserved
+	data VDPWD              ; r12 constant
+	bss  6                   ; r13-15 reserved for rtwp
+names 
+    byte ' '+>60,'0'+>60
+    byte ' '+>60,'1'+>60
+    byte ' '+>60,'2'+>60
+    byte 'x'+>60,'1'+>60
+    byte 'y'+>60,'1'+>60
+    byte 'x'+>60,'2'+>60
+    byte 'y'+>60,'2'+>60
+    byte ' '+>60,'7'+>60
+    byte ' '+>60,'8'+>60
+    byte ' '+>60,'9'+>60
+    byte '1'+>60,'0'+>60
+    byte '1'+>60,'1'+>60
+    byte '1'+>60,'2'+>60
+    byte '1'+>60,'3'+>60
+    byte '1'+>60,'4'+>60
+    byte '1'+>60,'5'+>60
+	byte 'v'+>60,'d'+>60
+	byte 'w'+>60,'p'+>60
+    byte 'p'+>60,'c'+>60
+	byte 's'+>60,'t'+>60
+	
+pr0: 
+    li   r0,rowbeg+>4000
+    bl   @setvad
+	mov  r13,r6
+	li   r7,20
+	li   r5,names            ; reg labels
+	mov  *r5,r3              ; space constant
+pr1:
+	ci   r7,4
+	jne  pr2
+; start with r12
+	stwp r6
+	ai   r6,24
+pr2:
+    movb *r5+,*r12
+    movb *r5+,*r12
+	movb r3,*r12
+    mov  *r6+,r4
+    bl   @a2
+	movb r3,*r12
+	dec  r7
+	jne  pr1
+ 
+	bl   @clrlst
+
+	li   r1,press		; Paused-Press any key
+	bl   @vstr
+
+pr3:
+	clr  r2
+	movb r2,@>8374      ; full keyboard mode
+    blwp @kscan
+	movb @STATUS,r0
+	coc  r8,r0
+	jne  pr3
+	
+	mov  r9,r0
+	li   r1,space
+	li   r2,32
+	bl   @vmsw
+	
+	rtwp
+	
+ 
+ copy "9d9damashi.a99"
+ copy "magellan.a99"
+ copy "king/king.a99"
+ copy "hoonos.a99"
+ copy "music.a99"
+ copy "coda.a99"
+ copy "maze.a99"
+ copy "kscan.a99"
+ end
+ 
+ 
