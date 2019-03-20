@@ -2,7 +2,9 @@
 ;
 ; init maze:
 ;  bl @newrow 9 times
-; each 16 ticks, bl @newrow again to refill chrbuf
+;
+; each 48 ticks, bl @newrow 2 times to refill chrbuf
+; (24 would work except we want odd/even frame buffer)
 
 ; tile bits:
 ; 00 unused (empty?)
@@ -46,8 +48,8 @@ newroz:                      ; chained entry point with r10 already set up
 	   li   r2,6
 newro0:
        mov  r13,r3
-;       andi r3,>0303
-       li r3,>0303 ; fudge
+       andi r3,>0303
+;       li r3,>0003 ; fudge
 	   mov  r3,*r1+
 
 	   bl   @rng
@@ -152,13 +154,13 @@ tiro21 movb r5,*bufreg  ; base of >80
 ; second byte
 tiro22 inc  bufreg
        movb r6,*bufreg	  ; base of 83
-       coc  2,r7
+       coc  1,r7
 	   jne  tiro23
        sb   1,*bufreg     ; >82
 ; third byte
 tiro23 inc  bufreg
        movb r6,*bufreg	  ; base of 83
-       coc  2,r7
+       coc  1,r7
 	   jne  tiro24
        sb   1,*bufreg     ; >82
 tiro24 inc  bufreg
@@ -206,9 +208,9 @@ tiro42 inc  bufreg
        dec  r4
 	   jne  tiro41
 
-; reset row counter
-	   li   r4,24
-	   mov  r4,@MAZROW
+; refill row counter. Call me twice to get to 48 so we have equal # of odd/even frames in a cycle.
+	   li   r4,48
+	   mov    r4,@MAZROW
 	   
        b    *r10	   
 
@@ -236,18 +238,18 @@ dramaz mov  r11,@mazr11
        
 	   li   r0,>4000+pattbl+>400   char >80 in first third
        mov @mazrow,r1
+	   dec  r1          ; rows 1-8 or 17-24 are the odd frame
        li   r2,8
 	   coc  r2,r1       ; tests for even/odd frame
 	   jne  framev
 	   ; odd
-	   ai   r0,>40      use chars >84-87 for odd frame before updating SIT
+	   ai   r0,>20      use chars >84-87 for odd frame before updating SIT
 framev
-; make r1 into mazpat + 0-7 line offset
+; make r1 into mazpat + 1-8 line offset
        andi r1,7
-	   ai   r1,mazpat
+	   ai   r1,mazpat+1
 	   
-	   
-	   li   r4,4        outest loop:  pat/col, third of screen,
+	   li   r4,4        outest loop:  pattern/color, third of screen,
 dramzc li   r3,4        outer loop: char
        bl   @setvad
 dramz6 li   r2,8        inner loop
@@ -261,10 +263,11 @@ dramz7 movb *r1+,*vd
 	   
 	   dec  r4
        jeq  dramz0
+	   
 	   ci   r4,2
 	   jne  dramz8
 	   ; switch to coltbl
-	   li   r0,>4000+coltbl+>400
+	   ai   r0,coltbl-pattbl->800
 	   ; r1 is correct
 	   jmp  dramzc
 ; second third
@@ -277,12 +280,14 @@ dramz8 ai   r0,>800
 dramz0:
 	   mov  @mazrow,r2
 	   li   r7,7
-	   coc  r7,r2        ; test the lower 3 bits for all ones
+	   czc  r7,r2        ; test the lower 3 bits for all zeros
 	   jne  dramz5       ; no, skip namtbl update 
+	   ; draw namtbl on 24,16,8
 	   li   r7,>8
+	   dec  r2
 	   coc  r7,r2        ; even or odd frame
 	   jne  dfrev
-dfrod  li   r7,>0400
+dfrod  li   r7,>0400     ; char offset for odd frame chars
        jmp  dfrrd
 dfrev  clr  r7
 dfrrd
@@ -338,12 +343,25 @@ dramz5
 	   
 dramzx dec  @mazrow
 	   jne  dramzz
+; mazrow reaches zero. refill buffers and sprites.
 	   bl   @newrow      ; sets mazrow to 24. keep buf and screen in sync please
+	   bl   @newrow      
+	   bl   @newhoo      ; 3 new hoonos every other tile row
 	   
 dramzz mov @mazr11,r11
        rt
+	   
+; hoonos spawn offscreen when tile is added to the maze.
 
-; crude set of 4 - no scrolling side to side
+; find a spot to generate a hoono in the tile row
+; keep a table of up to chrhgt. generate up to 3 new ones per tile row.
+; simple: spawn the hoono in the lower left corner of the tile.
+; always put new hoonos at the top of the satr in case one is on >D0 . >CF is the first row it could spawn.
+; no, not if its in the lower left thats >F7 first, then scrolled up to >DF.
+; still, just delete sprites from the disappearing tiles, even if they've migrated (bug).
+
+
+; Set of 4 tiles (16 pixels down) for vertical scrolling- no scrolling side to side 
 ; 00 space with space below
 ; 01 space with block below
 ; 10 block with space below
@@ -356,5 +374,6 @@ mazcol data >eaea,>eaea,>eaea,>eaea,>eaea,>eaea,>eaea,>eaea  ; grey on yellow sp
        data >eaea,>eaea,>eaea,>eaea,>e5e5,>e5e5,>e5e5,>e5e5  ; grey on blue block
        data >e5e5,>e5e5,>e5e5,>e5e5,>eaea,>eaea,>eaea,>eaea
        data >e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5,>e5e5 
+; (future: at runtime generate 16 tile combos in 8 left-right shifts)
 
 

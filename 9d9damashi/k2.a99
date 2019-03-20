@@ -18,7 +18,7 @@ STATUS EQU  >837C
 * 00 000000 M3 EV
 * 01 16K BLANK IE M1 M2 0 SIZE MAG
 * 02 0000 NAMTBL
-* 03 COLTBL
+* 03 11111 COLTBL
 * 04 00000 PATTBL
 * 05 SPRATR
 * 06 SPRPAT
@@ -26,14 +26,15 @@ STATUS EQU  >837C
 
 * memory map G2
 PATTBL EQU >0000            ; pattern table
-SPRPAT EQU >1800            ; sprite pattern table (defns >80+ available in >1c00 to >1fff)
 NAMTBL EQU >1800            ; name table
 SPRATR EQU >1B00            ; sprite atr table
 COLTBL EQU >2000            ; color table
+SPRPAT EQU >3800            ; sprite pattern table 00-ff (defns >80+ were available in >1c00 to >1fff)
+; see sprites.a99 for sprite pattern table use
 
 * define all the vdp registers for G2 mode (bitmap).
 * lsbs of 3 and 4 must be all 1s in G2
-g2regs data >0280,>e081,>0682,>ff83,>0384,>3685,>0386,>1e87
+g2regs data >0280,>e081,>0682,>ff83,>0384,>3685,>0786,>1e87
 vreg1b EQU g2regs+2         ; pointer to our VR1 default value
 vreg7b EQU g2regs+14        ; pointer to our VR7 color default value
 
@@ -146,7 +147,7 @@ chara:
 	movb r0,@VDPWA
 	swpb r0
 	movb r0,@VDPWA
-    li  r1,>06b4
+	li  r1,>06b4
 	movb r1,@GRMWA
 	swpb r1
 	movb r1,@GRMWA
@@ -159,7 +160,7 @@ chara2:
 	dec  r2
 	jne  chara2
 
-    dec  r1
+	dec  r1
 	jne  chara1
 	rt
 	
@@ -240,8 +241,7 @@ clrlst:
 	
 press text 'Paused-press any key'
 	byte 0
-wedone text 'Done'
-    byte 0
+
 
 * 83c2: interrupt flags
 * 0 disable interrupt
@@ -364,7 +364,8 @@ pr3:
 	bl   @vmsw
 	
 	rtwp
-	
+
+ 
  
  copy "9d9damashi.a99"
  copy "magellan.a99"
@@ -374,6 +375,7 @@ pr3:
  copy "coda.a99"
  copy "maze.a99"
  copy "kscan.a99"
+ copy "sprites.a99"
  end
  
  

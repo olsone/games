@@ -103,8 +103,8 @@ boxna1
 ; so when setting bits, if index is 0-31, also copy to +75.
 ; conveniently this is a czcb >f8,y1 operation! jne.
 ;
-; when a sprite gets rolled up, does it enter the buffer in the same order or reverse?
-; in rolling up, the 0 index takes the bottom of the sprite, and eats upward.
+; Q. when a sprite gets rolled up, does it enter the buffer in the same order or reverse?
+; A. in rolling up, the 0 index takes the bottom of the sprite, and eats upward.
 ;
 ; let 'roller index' i mean the top pixel you see. if this is 0, it implies the next rollup goes in at i+ 3/4C
 ; or 3*75.4/4 = 56.55. +56. AND they have to go in in reverse. Bottom to top.
@@ -162,7 +162,7 @@ rorap2 movb *r0,*r3+
 	   clr  r5
 rorap3 dec  r2         ; counter
 	   jne  rorap1
-       rt
+       rt              ; return with EQ set
 	   
 ; draw the roller to the screen
 ; roller index is in r9
@@ -268,40 +268,6 @@ draopt
       movb *r6+,*vd  ; 29 -> 23
       rt	  
 
-; new hoono sprite
-newno
-    li   r0,satrb+4      ; more than words!
-; x coordinate
-	mov    r13,r1          ; is this really random? call rng to get the next rn.
-	andi r1,>38          ; y=0, x=random
-	ci   r1,>30
-	jlt  newno1
-	ai   r1,->10
-	mov  r13,r2          ; y=rnd
-	andi  r2,>0700
-	a     r2,r1
-newno1
-	ai   r1,>68          ; left x of roller
-	mov  r1,*r0+
-; pattern
-	li   r1,>9000        ; pattern
-    movb r1,*r0+
-; hoono#
-	mov  r13,r1       ; is this really random?
-	swpb r1
-	andi r1,>1f           ; there are actually 20 to choose from
-    ci   r1,20
-    jlt  $+6
-    ai   r1,-20
-	mov  r1,@hoono#
-; color
-    movb @thcolr(r1),*r0+
-; load 8 new sprpat hoono chars
-	sla  r1,6            ; x64
-	ai   r1,hoonos
-	li   r0,SPRPAT+>480
-	li   r2,64
-	b    @vmbw 
 ;
 ;
 ; entry point K2
@@ -331,7 +297,7 @@ k2	limi 0
 * put character set in 3rd pat tbl, chars >80 to >be
  	li   r0,patasc
 	bl   @chara
-* TODO: put character set in 1st and 2nd at chars >20 to >67
+* TODO: put character set in 2nd third at chars >20 to >67 (magellan map is in top third there)
 	
 * fill lower 3rd with spaces
     li   r0,rowbeg
@@ -359,26 +325,25 @@ k2	limi 0
      data namtbl+>18d,>6800,>0306
 	 
 ; init sprites
-    li   r0,SPRPAT+>400  ; pattern >80
+    li   r0,SPRPAT+(munkch*8)  ; was pattern >80 .. oops forgot () >1880 * 8 or c400 disaster
 	li   r1,munkur
-	li   r2,128          ; 16 patterns. next is >90
+	li   r2,128          ; 16 patterns. next is >10
 	bl   @vmbw
-    li   r0,SPRPAT+>480  ; pattern >90
+    li   r0,SPRPAT+(hoonch*8)  ; was pattern >90
 	li   r1,hoonos
-	li   r2,64           ; 8 patterns of pinwheel. next is >98
+	li   r2,20*8*8       ; 8 patterns of each of 20 hoonos
 	bl   @vmbw
 ; munchman sprite	
 	li   r0,satrb
 	li   r1,>777c        ; y,x
 	mov  r1,*r0+
-	li   r1,>880c        ; pat,color
-    mov  r1,*r0+
-	
-; hoono sprite
-	li   r1,>0080        ; y,x
+	li   r2,(munkch+8)*256+12        ; pat,color
+    mov  r2,*r0+
+; munchman background
 	mov  r1,*r0+
-	li   r1,>9004        ; pat,color
-    mov  r1,*r0+
+	ai   r2,>0302        ; background, grey
+    mov  r2,*r0+
+; snd 1,2,3	
 ; snd#1 sprite
     li   r1,>50c0        ; y,x
 	li   r2,>f003        ; pat,color
@@ -394,17 +359,17 @@ k2	limi 0
 	inct  r2
 	mov  r1,*r0+
 	mov  r2,*r0+
-	
+; hoono sprites will go here	
 ; end the sprite list with >d0
     li   r1,>d0d0
     mov  r1,*r0+
     
 ; dancing sprite pats
-    li   r0,sprpat+>780
+    li   r0,sprpat+(8*dansch)
 	li   r1,dance
 	li   r2,9*8
 	bl   @vmbw
-; ought to collect all the vmbws into a list
+; TODO: collect all the vmbws into a list
 	
 ; Load the King
     li   r0,PATTBL+>0000 ; vdp table address 
@@ -430,7 +395,7 @@ k2	limi 0
 	clr r14             ; tick count
 	
 ; init the maze
-    li   r8,9
+    li   r8,chrhgt/3
 newrows:
     bl   @newrow
 	dec  r8
@@ -450,7 +415,7 @@ loop
 
 	mov  r13,r4
 	bl   @a2
-	jeq  $+2   ; insomnia: create a byte constant 0
+	jeq  $+2   ; create a byte constant 0 (insomnia)
 bzero equ $-1
 
 	mov  r14,r4
@@ -483,55 +448,19 @@ bzero equ $-1
 	mov  *r0,r1
 	li   r2,>0300
 	ai   r1,>0100
-    coc  r2,r1	
+    coc  r2,r1     ; compare lower bits to 3	
 	jne  $+4
 	szc  r2,r1     ; change lower bits 3 to 0
 	mov  r1,*r0
+; animate hoonos
+hoono	bl @aninew
 
-hoono	
-; animate hoono
-	li   r3,>0100  ; constant
-	li   r0,satrb+4
-	mov  *r0,r2    ; fetch y,x
-	a    r3,r2
-	mov  r2,*r0+
-	mov  *r0,r1    ; fetch pattern, color
-	ci   r2,>5a00  ; y coordinate hits roller
-	jh   eatit
-	coc  r7,r14
-	jne  hoono2    ; no animation
-	a    r3,r1
-	ci   r1,>9800
-	jl   $+6
-	ai   r1,->0800
-	mov  r1,*r0    ; update pattern#,color
-    jmp  hoono2
-eatit	
-; roll it up
-    mov  r1,r0
-    ai   r0,->9000
-; plus hoono#*8
-    srl  r0,3
-	ab   @hoono#+1,r0
-	srl  r0,2      ; guaranteed that low byte is gone
-	ai   r0,hoonos
-	sla  r1,12     ; color to fg nybble
-	ai   r1,>0300  ; add sickly green bg nybble
-	andi r2,>ff
-	ai   r2,->0068 ; x relative to roller left edge
-	jlt  missed
-	ci   r2,40 
-    jgt  missed	
-	bl   @rorapu
-missed
-    ; update rng ;
-	
-	bl   @rng
-	
-	bl   @newno
     
-hoono2
-
+	; old
+	; bl @anihoo
+    ; jne  $+6
+	; bl   @newno    ; anihoo ended with rorapu.
+    
 ; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
 vsync:
        movb @vdpsta,r12
@@ -545,7 +474,7 @@ vsync_1:
 ; update sprites 
     li   r0,SPRATR
 	li   r1,satrb
-	li   r2,21
+	li   r2,satrln
 	bl   @vmbw
 	
 ; boring bandwidth  - redefine character >80 only
@@ -584,7 +513,7 @@ kloop
 	movb @STATUS,r2
 	li   r8,>2000
 	coc  r8,r2
-	jne   next
+	jne  next
 	; jmp next
 ; on key... reset music
     clr  r2
@@ -599,10 +528,11 @@ kloop
     bl   @play
 	jmp  next
 tmpoup
-    dect @DEL ; save a jmp
+    inct @DEL
+	jmp  next
 tmpodn	
-	inc  @DEL
-
+	dect @DEL
+	
 next b @loop
 
 
@@ -744,8 +674,7 @@ ck3 rt
 
 ; lfsr rng	   state in r13
 ; r13(15) = r13(0) xor r13(3)
-rng
- mov r13,r0
+rng  mov r13,r0
  srl r0,3
  xor r13,r0
  srl r13,1
@@ -766,7 +695,7 @@ munkul data >3c57, >7f06, >0667, >7f3c ; munchman left
 munkuu data >0066, >e5c7, >c5ff, >7e66 ; munchman up
        data >0066, >e5e7, >fdff, >7e81  
        data >0066, >fdff, >fdff, >7e66
-	   bss  8
+	   data >007e, >ffff, >ffff, >7e00 ; background
 munkud data >667e, >ffa3, >e3a7, >6600 ; munchman down
        data >187e, >ffbf, >e7a7, >6600
        data >667e, >ffbf, >ffbf, >6600
@@ -823,9 +752,6 @@ roldep equ 106                       ; nominal plus aliasing buffer
 rolpad equ roldep-rolnom              ; size of aliasing buffer
 rolsiz equ roldep*6
 rolcol data 0,roldep,2*roldep,3*roldep,4*roldep,5*roldep    ; column indexes
-hoono# data 0
-satrb  bss 128                        ; satr cache
-
 
 ; buffers voted most likely to overflow. keep away from code!
 
@@ -856,4 +782,9 @@ rolclr bss rolsiz
 ; 3/1/19
 ;    
 ; 3/9/19 
-;    
+;    kscan - kpax
+;    simple maze 4 tiles 4 chars, scrolling
+; 3/10/19
+;    debug maze drawing
+; 3/11/19
+;    21 hoono sprites in maze

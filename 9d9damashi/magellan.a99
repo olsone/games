@@ -71,7 +71,7 @@ INIMA2 movb *r1+,*vd    ; vdp write loop
 ; R12 save return address
 
 ; find map #
-; magellan writes MC0 data 0 for each map???
+; magellan writes MC1 data 0 for next map??? should be 1
 DRAMAP li   r1,mcount
 	   mov  *r1+,r2         ; count of maps
 DRAMA1 c    *r11,*r1+	   

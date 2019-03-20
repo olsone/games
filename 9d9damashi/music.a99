@@ -355,7 +355,7 @@ envjmp
 * R8 msb is attn
 label5
 ; sprite pat
-	li   r11,>e101        ; (attn#+1)/2 -> pat, +>f0
+	li   r11,>e101        ; (attn#+1)/2 -> pat, +>f0  (sorry skipping dansch equ)
 	ab   r8,r11
 	src  r11,1
 	movb r11,@2(r12)

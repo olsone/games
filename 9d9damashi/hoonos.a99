@@ -1,6 +1,6 @@
-; all the munchman monsters (hoonos)
+; all the munchman ghosts (hoonos)
 ; from grom 0cd4
-; there are 20 monsters with 8 patterns each.
+; there are 20 hoonos with 8 patterns each.
 	 
 ; ENGLISH    JAPANESE	 
 ;
@@ -14,6 +14,7 @@
 ; birds      tori       鳥
 ; lawnmower  Shibakariki  芝刈り機
 ; tornado    Tatsumaki   竜巻
+;
 ; jack       Jakku      ジャック
 ; dick       Dikku       ディック squid Ika いか
 ; spring     Haru        春
@@ -25,6 +26,29 @@
 ; chinese    Chūgokujin  中国人
 ; mine       Jiraigen 地雷原  Hoshi 星
 
+; favorite hoono colors: 4 choices each
+hoonoc
+      byte 12,8,4,13 ; dk green, md red, dk blue, magenta
+      byte 5,7,4,9   ; lt blue, cyan, dk blue, lt red
+      byte 6,6,6,1   ; dk red, black
+      byte 14,14,3,3 ; magenta, lt green
+      byte 8,8,8,1   ; md red, black
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 15,15,15,15 ; gray, white
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 15,15,15,15 ; gray, white
+	  
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
+      byte 12,9,4,13 ; dk green, lt red, dk blue, magenta
 
 hoonos equ $
       data >62b9,>3f6a,>7ee4,>9d46,>c7a1,>be2a,>3c7d,>85e3  ; kazaguruma
