@@ -131,3 +131,14 @@ hoonos equ $
       data >0008,>38fc,>7c7e,>3820,>0020,>387e,>7cfe,>3808
       data >0004,>1c7e,>3e3f,>1c10,>0010,>1c3f,>3e7e,>1c04
       data >041c,>7e3e,>3f1c,>1000,>101c,>3f3e,>7e1c,>0400
+	  
+; definitions of monsters
+; 2 flags
+;    >xx00 add to step to next animation frame: 0,1,2,3,4 (most 1)
+;    >0001 double size (TODO)
+;    >0002 add direction index to starting char (most 0)
+
+; 2  char# to lastchar#+1 if animated   (e.g. 0810)
+; 2  4 color nybbles packed, random
+; 2  ptr to name for king to say
+; 

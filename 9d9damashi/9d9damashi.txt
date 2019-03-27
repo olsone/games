@@ -1,0 +1,341 @@
+
+6. 9d9damashi
+
+Good morning. I introduce a new game demo called 9d9damashi. You play the "Munch-Man". The Emperor "Not Polyoptics" 
+commands you to roll up all of the ghosts. You must use a katamari.
+
+
+I can not promise this will be a full game.
+
+But I love it very much.
+
+
+おはようございます。 9d9damashiという新しいゲームデモを紹介します。あなたは「ムンクマン」をします。皇帝「非ポリオプティクス」
+すべての幽霊をロールアップするように指示しますカタマリを使わなければなりません。
+
+
+私はこれが完全なゲームになると約束することはできません。
+
+しかし、私はそれが大好きです。
+
+
+Ohayōgozaimasu. 9 D 9 damashi to iu atarashī gēmudemo o shōkai shimasu. Anata wa `munkuman' o shimasu. Kōtei `hi porioputikusu' subete no yūrei o rōruappu suru yō ni shiji shimasu katamari o tsukawanakereba narimasen. Watashi wa kore ga kanzen'na gēmu ni naru to yakusoku suru koto wa dekimasen. Shikashi, watashi wa sore ga daisukidesu.
+
+
+Shorter:
+
+Good morning!
+
+You are the Munch-Man. 
+
+You have a katamari roll.
+
+Roll up the things.
+
+Go!
+
+
+Ohayōgozaimasu! Anata wa munkumandesu. Katamarirōru ga arimasu. Monogoto o rōruappu shimasu. Ike!
+
+
+Ohayōgozaimasu! 
+
+Anata wa Munku-Man desu. 
+
+       =G
+ 
+Katamarirōru ga arimasu.
+
+	(====)
+	(====)
+	(====)
+
+Monogoto o rōruappu shimasu.
+
+	-|
+	|-
+
+Ike!
+
+
+
+
+make roller area 3x6 leave 1 empty row below it
+its address is >14d0
+OR rearrange the tile map so its bits are contiguous. Yes, rearrange.
+Bottom third:
+
+if playfield is 16x16 then use bottom 2/3rds.
+paint 8 chars down contiguous, 16 columms. total 128. The other 128 can even be a charset.
+
+or just fill the whole area that way.   
+
+0,8,16,24 .. 248
+1,9,17,25 .. 249
+..
+7,15,23,  .. 255
+
+now cut out a 8x16 playfield to be contiguous:
+0,0,0,0,0,0,0,0 >80,>88,>90 ..  >f0,>f8 0,0,0,0,0,0,0,0 
+0,0,0,0,0,0,0,0 >81,>89,>91 ..  >f1,>f9 0,0,0,0,0,0,0,0 
+                ..
+0,0,0,0,0,0,0,0 >87,>8f,>97 ..  >f7,>ff 0,0,0,0,0,0,0,0 
+
+repeat
+
+within the middle third, the roller is a 3x6 chunk starting with >ad
+
+>ad,b5,bd .. d5
+>ae,b6,be .. d6
+>af,b7,bf .. d7
+
+the roller is 24 pixels high. map 24 pixels to a circle.
+D=24 r=12 C=75.396
+ 
+ drop a ray from the center of the pixel to sample a texture map on the log
+ map 75 pixels into 24 samples.
+ r=12
+ for x=0.5 to 23.5
+   y = sqrt(144-x*x)
+   
+$  cat xy.c
+#include <stdio.h>
+#include <math.h>
+
+int main()
+{
+  double r=12.0;
+  double c = 2*r*M_PI;
+
+  printf("  r=%f  c=%f\n", r, c);
+
+  printf(" i  arc arc      x       y\n");
+  for (int i=0; i<24; ++i) {
+    double x = (double)i - 11.5;
+    double y = sqrt(144.0 - x*x);
+    double cosine = x/r;
+    double arc = r*acos(cosine);
+    double u = floor(0.5+arc);
+    printf("%2d %2.0f %6.3f %6.3f %6.3f\n", i, u, arc, x, y);
+  }
+}
+
+leftover 0.398 pixel should be distributed to all quarters. subtract 1/4 of it from each arc length.
+  r=12.000000  c=75.398224
+ i  arc arc      x       y
+ 0 34 34.223 -11.500  3.428
+
+ 1 32 31.635 -10.500  5.809
+
+ 2 30 29.812 -9.500  7.331
+ 3 28 28.295 -8.500  8.471
+
+ 4 27 26.951 -7.500  9.367
+ 5 26 25.719 -6.500 10.087
+ 6 25 24.563 -5.500 10.665
+
+ 7 23 23.462 -4.500 11.124
+ 8 22 22.401 -3.500 11.478
+ 9 21 21.368 -2.500 11.737
+10 20 20.353 -1.500 11.906
+11 19 19.350 -0.500 11.990
+
+12 18 18.349  0.500 11.990
+13 17 17.346  1.500 11.906
+14 16 16.331  2.500 11.737
+15 15 15.298  3.500 11.478
+16 14 14.237  4.500 11.124
+
+17 13 13.136  5.500 10.665
+18 12 11.981  6.500 10.087
+19 11 10.748  7.500  9.367
+
+20  9  9.404  8.500  8.471
+21  8  7.887  9.500  7.331
+
+22  6  6.064 10.500  5.809
+
+23  3  3.476 11.500  3.428
+
+
+that's all round to closest.
+
+
+the whole circumference is 75
+might as well subtract 3 from index giving 0-31
+useful to have aliased copy of 31 more pixels giving total of 106 pixels deep.
+
+there are 6 columns.
+
+so when setting bits, if index is 0-31, also copy to +75.
+conveniently this is a czcb >f8,y1 operation! jne.
+
+when a sprite gets rolled up, does it enter the buffer in the same order or reverse?
+in rolling up, the 0 index takes the bottom of the sprite, and eats upward.
+
+let 'roller index' i mean the top pixel you see. if this is 0, it implies the next rollup goes in at i+ 3/4C
+or 3*75.4/4 = 56.55. +56. AND they have to go in in reverse. Bottom to top.
+
+
+$ ./xy
+  r=12.000000  c=75.398224
+ i  arc arc      x       y
+ 0 34 34.378 -11.500  3.428
+ 1 32 31.790 -10.500  5.809
+ 2 30 29.967 -9.500  7.331
+ 3 28 28.450 -8.500  8.471
+ 4 27 27.106 -7.500  9.367
+ 5 26 25.874 -6.500 10.087
+ 6 25 24.718 -5.500 10.665
+ 7 24 23.617 -4.500 11.124
+ 8 23 22.556 -3.500 11.478
+ 9 22 21.523 -2.500 11.737
+10 21 20.508 -1.500 11.906
+11 20 19.505 -0.500 11.990
+12 20 18.504  0.500 11.990
+13 19 17.501  1.500 11.906
+14 17 16.486  2.500 11.737
+15 16 15.453  3.500 11.478
+16 15 14.392  4.500 11.124
+17 14 13.291  5.500 10.665
+18 13 12.136  6.500 10.087
+19 12 10.903  7.500  9.367
+20 11  9.559  8.500  8.471
+21  9  8.042  9.500  7.331
+22  7  6.219 10.500  5.809
+23  5  3.631 11.500  3.428
+      movb *r6+,*vd  ; 0 -> 0
+      inc  r6        ; 1
+      movb *r6+,*vd  ; 2 -> 1
+      inc  r6        ; 3
+      movb *r6+,*vd  ; 4 -> 2
+      inc  r6        ; 5
+      movb *r6+,*vd  ; 6 -> 3
+      movb *r6+,*vd  ; 7 -> 4
+      movb *r6+,*vd  ; 8 -> 5
+      movb *r6+,*vd  ; 9 -> 6
+      movb *r6+,*vd  ; 10 -> 7
+      movb *r6+,*vd  ; 11 -> 8
+      movb *r6+,*vd  ; 12 -> 9
+      movb *r6+,*vd  ; 13 -> 10
+      movb *r6+,*vd  ; 14 -> 11
+      movb *r6+,*vd  ; 15 -> 12
+      movb *r6+,*vd  ; 16 -> 13
+      movb *r6+,*vd  ; 17 -> 14
+      movb *r6+,*vd  ; 18 -> 15
+      movb *r6+,*vd  ; 19 -> 16
+      movb *r6+,*vd  ; 20 -> 17
+      movb *r6+,*vd  ; 21 -> 18
+      movb *r6+,*vd  ; 22 -> 19
+      movb *r6+,*vd  ; 23 -> 20
+      inc  r6        ; 24
+      movb *r6+,*vd  ; 25 -> 21
+      inc  r6        ; 26
+      movb *r6+,*vd  ; 27 -> 22
+      inc  r6        ; 28
+      movb *r6+,*vd  ; 29 -> 23
+	  
+the maze
+
+1. blocks on, blocks off
+2. draw just the edges of blocks on, fancy curves / double lines even
+
+*.*
+*.*
+*.*
+*.*
+*.*
+*..*****
+.*......
+..******
+
+combinations after scrolling
+
+00
+00
+
+11        11
+10        01
+
+  00 00 00
+  01 11 10
+
+  01 11 10
+  01 11 10
+
+  01 11 10
+  00 00 00
+
+10        01
+11		  11
+		  
+unused combos
+
+10
+01 
+
+01
+10
+
+constant
+8 left to right of each thing (just blocks first)
+
+column changing
+
+fill pattern buffers 16 high each
+add 2 things to get each row
+
+row changing:
+write 16 patterns to pat table 
+
+screen:
+upper left location + bits in + directions	  
+map must be 17 wide, 17 tall.
+just make it 32x32? 1k buffer
+  m   
+
+Simple random maze
+
+1x8 tiles
+18x16 chars
+
+NewRow:
+move chars down 2 rows
+GenTiles:    __  |  |_
+convert tiles to chars
+defn: tiles are 2x2 chars. only chars in 1st col and 2nd row can be path (empty)
+
+2x8 tiles
+18x24 chars
+defn: tiles are 3x3 chars
+
+drawchars:
+chars are not just block and space. they encode what's to the right and downward (for scrolling)
+there are 16 combinations, 16 char names.
+
+1. encode only what's below
+2. add scrolling
+
+tile bits:
+00 unused (empty?)
+01 __
+10 |
+11 |_
+
+===================== XDT99 ===============
+
+Assemble
+
+
+
+
+../xdt99/xas99.py -R k2.a99  -L k2.lst ;  cp k2.obj k2
+
+
+
+
+Add the object file to a disk
+
+../xdt99/xdm99.py  work.dsk -a k2.obj -f DF80
+
+

@@ -9,8 +9,9 @@
 ;
 ; new way
 ;
-; newhoo: 3 hoonos created per NEWROW call, on the yellow squares.
-; aninew: TODO
+; newhoo: 3 hoonos created on a NEWROW call, on the yellow squares. call every other NEWROW.
+;
+; aninew: do one tick of animation
 ;
 ;
 ;
@@ -19,16 +20,33 @@ satrb  bss 128         ; satr table working copy in cpu ram
 
 ; #0 munku-man
 ; #1 munchman background
-; #2,3,4 music dancing sprites
-; #5-16 hoonos. 3 generated every other maze tile row.
+; #2,3,4,5 music dancing sprites
+; #6-17 hoonos. 3 generated every other maze tile row.
 ;
 nhoono equ 12          ; number of hoonos in new way. 7 maz tile rows, max = 4 rows * 3 hoonos
-
-satrho equ satrb+20    ; first hoono sprite, #5, in satr
+frstho equ  6
+satrho equ satrb+(frstho*4)    ; first hoono sprite, #5, in satr
 satlst equ satrho+(nhoono*4)   ; end of list compare 
 satrin equ satlst-12    ; new group starts 3 sprites before end
 
 satrln equ satlst-satrb+1 ; how much to copy to vdp ram
+;
+; motion table
+;
+; y(byte),x(byte),countdown(word)
+; move x,y per tick
+motion bss 128
+moho   equ motion+(frstho*4)
+molast equ moho+(nhoono*4)
+moin   equ molast-12
+;
+; 4 directions for sprites. y,x
+dirs   byte 0,1,>ff,0,0,>ff,1,0
+       byte 0,1,>ff,0,0,>ff,1,0   ; repeat
+eight  data 8
+; 4 directions offset in mazbuf
+mazdir data 1,-chrwid,-1,chrwid
+       data 1,-chrwid,-1,chrwid   ; repeat
 
 ;
 ; sprite pattern numbers
@@ -38,9 +56,10 @@ hoonch equ >10         ; first hoono spr char def : 20*8
 nextch equ >b0         ; next free
 dansch equ >f0         ; first dancing sprite char def : 9
 
+; register equates
 hoono#  equ  4     ; hoono# * 4 register
 sptr    equ  6     ; satrb loop pointer register
-
+moptr   equ  5     ; motion table pointer register
 ;
 ; newhoo
 ;
@@ -53,17 +72,20 @@ sptr    equ  6     ; satrb loop pointer register
 ;
 ; r0,r1,r2,r3
 ; r4 hoono# * 4
+; r5 ptr into motion
 ; r6 sptr into satrb
-;
+; r7 constant >7e00
 
 newhoo
     mov  r11,r10
 	; move sprite table up by 3 entries
+	; move motion table up by 3 entries
 	li   sptr,satrho
-	li   r1,satrho+12  
+	li   moptr,moho
 	li   r2,(nhoono-3)*4
 newho0
-	mov  *r1+,*sptr+
+	mov  @12(sptr),*sptr+
+	mov  @12(moptr),*moptr+
 	dect r2
 	jne  newho0
 ; let r4 = hoono# 
@@ -72,39 +94,77 @@ newho0
 	
 	andi hoono#,>3f       ; there are actually 20 to choose from
 	li   r2,>14
-newho4
+mod0
     c    hoono#,r2
-    jl   newho5
+    jl   mod1
     s    r2,hoono#        ; 64 modulo 20 makes the first 4 more likely
-	jmp  newho4
-newho5
+	jmp  mod0
+mod1
     sla  hoono#,2         ; hoono# * 4
 	
 ; pick 3 locations for new hoonos.
 ; row 2, col 0-15 search.
 ;
 ; sprite pattern 0, color 0 will mean a deleted sprite.
-    li   sptr,satrin    ; first new sprite
+    ; redundant
+;	li   sptr,satrin    ; first new sprite
 newho1
     bl   @rng           ; remember this uses r0
     mov  r13,r1
-    andi r1,>f
+    andi r1,>f          ; this is actually less than chrwid
 ; search for a spot in chrbuf
     mov  r1,r2
-	li   r0,>7e00
+	li   r7,>7e00
 newho2
     movb @chrbuf+chrwid+chrwid(r2),r3
-	czc  r0,r3    ; allow >80,>81 but not >82,>83
+	czc  r7,r3    ; allow >80,>81 but not >82,>83
     jeq  newho3   ; good spot, use r2
     inc  r2
-	andi r2,>f
+	andi r2,>f    
 	c    r1,r2
 	jne  newho2   ; else fail
-	clr  r1
-	mov  r1,*sptr+
-	jmp newho6
-	; one empty hoono slot
+; one empty hoono slot
+	clr  *sptr+
+	clr  *sptr+
+	clr  *moptr+
+	clr  *moptr+
+	jmp  newho7
+	
 newho3
+; choose a direction  away from *r0
+    clr  *moptr
+
+; r1 direction*2
+; r2 starting column
+; r7 constant >7e00
+	mov  r13,r1
+	andi r1,6
+; does it give?
+newho4
+	mov  @mazdir(r1),r0
+	ai   r0,chrbuf+chrwid+chrwid
+    a    r2,r0      
+	movb *r0,r3
+	czc  r7,r3
+	jeq  newho5  ; good dir
+    inct r1
+    ci   r1,16
+    jlt  newho4  ; by going up to 8 tries, we cycle through all the
+; possibilities, while allowing there might be bugs in the maze code.
+
+; give up:
+    ai   moptr,4
+	jmp  newho6
+newho5
+; how far does it go in a straight line?
+    a    @eight,*moptr
+	a    @mazdir(r1),r0
+	movb *r0,r3
+	czc  r7,r3
+	jeq  newho5  ; go one more square. bug: it can wrap around
+    inct moptr
+	mov  @dirs(r1),*moptr+
+newho6	
 ; populate sprite atr    	
     ; x
 	ai   r2,8
@@ -124,6 +184,7 @@ newho3
     mov  r13,r2
 	swpb r2            ; avoid correlation without another bl @rng
     andi r2,>3         ; random color 0-3
+	
 	a    hoono#,r2     ; hoono# * 4 + 0-3
 
     mov hoono#,r1
@@ -135,8 +196,9 @@ newho3
 	a    r0,r1        ; add 0-7 to the char# so they don't all look alike
     movb @hoonoc(r2),r1 ; put color in same word
     swpb r1           ; -> char then color
-newho6	
 	mov  r1,*sptr+
+    
+newho7
 
 	ci   sptr,satrin+12  ; loop?	
 	jl   newho1          ; make another one
@@ -147,6 +209,7 @@ newho6
 ;
 ;
 ; register usage
+;   r5  motion table pointer
 ;   r6  satrb loop pointer
 ;   r10 rt address
 ;   r7  constant (reload each loop after sub calls)
@@ -189,11 +252,12 @@ anino0
 	sla  r1,12     ; color to fg nybble
 	ai   r1,>0300  ; add sickly green bg nybble
 	bl   @rorapu   ; clobbers r0-r5
+	bl   @chomp    ; make sound
     jmp  anino3
 	
 anino1
 	coc  r7,r14    ; animate every 8 ticks
-	jne  anino2    ; not animation time
+	jne  noani     ; not animation time
 	swpb r7        ; constant >0700
 	coc  r7,r1
 	jne  $+6
@@ -201,6 +265,24 @@ anino1
 	jmp  $+4
 	a    r3,r1     ; next charpat
 	mov  r1,*sptr  ; update pattern#,color
+noani
+    srl  r7,2
+	coc  r7,r14
+	jne  nomo1
+; motion time
+    mov  sptr,moptr
+	ai   moptr,motion-satrb-2
+    mov  *moptr,r0
+	jeq  nomo1
+	dec  *moptr+
+	ab   *moptr+,@-2(sptr)
+	ab   *moptr+,@-1(sptr)
+	jmp  nomo2
+nomo1
+    inct moptr
+nomo2
+    inct moptr
+        
 anino2
 ; next
     inct sptr

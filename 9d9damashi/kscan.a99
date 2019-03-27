@@ -103,7 +103,7 @@ kpax:
 	   clr  r3
 	   clr  r4
 	   clr  r5
-
+       clr  r6
   
 kpax1  mov  @KEY_UP,r0
 	   bl   @check_key
@@ -113,7 +113,7 @@ kpax1  mov  @KEY_UP,r0
 kpax2  mov  @KEY_DN,r0
 	   bl   @check_key
 	   jeq  kpax3
-	   li   r3,1
+	   inc  r3
 
 kpax3  mov  @KEY_LT,r0     ; left
 	   bl   @check_key
@@ -123,7 +123,7 @@ kpax3  mov  @KEY_LT,r0     ; left
 kpax4  mov  @KEY_RT,r0     ; right
 	   bl   @check_key
 	   jeq  kpax5
-	   li   r4,1
+	   inc  r4
 
 kpax5  mov  @KEY_FI,r0
 	   bl   @check_key
@@ -143,6 +143,6 @@ kpax7  li   r0,KEY_SL     ; /- keys, go slower
 kpax8  li   r0,KEY_EQ     ; =+ keys, go faster
 	   bl   @check_key
 	   jeq  kpax9
-	   li   r6,1
+	   inc  r6
 
-kpax9  rt
+kpax9  b    *r10

@@ -2,6 +2,7 @@
 ;
 ; this assembly version by Erik Olson
 ;
+; Reference:
 ; http://atariage.com/forums/topic/278460-may-the-forth-musical-offering-forti-decompiled/
 
 
@@ -83,6 +84,22 @@ pt4
  data >e7e7,>e7e7,>e7e7,>e7e7 
 ; unfinished
 
+
+; munchman chomp in 4 notes
+; first dancing sprite note is 48(col 0)
+pt5 equ $-98
+ data >e7df,>cc01,>cc03,>cc05
+ 
+; ats
+pulse byte 0,2,>81
+; voice
+; this is the munchman chomp sound.
+SNDEAT
+ byte 49,1   ; init noise, silence 3
+ byte 50,2  ; freq for 3
+ byte 51,2  ; freq for 3
+ byte 52,2  ; freq for 3
+ byte 0,0
 
 ; tail size,attn bytes,cmd byte .. 64 bytes
  
@@ -175,7 +192,7 @@ PNDX EQU 12
 ; current dynamic level. this should be a register!
 DYN  data 16
 ;
-DEL  data >38       ; the default value for tempo. >20 is neutral. 24 ticks is 24 * 1/60th second.
+DEL  data >46       ; the default value for tempo. >20 is neutral. 24 ticks is 24 * 1/60th second.
 SPC  data 0
 WSP  data 13
 
@@ -184,10 +201,11 @@ DYT  byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
      byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,14
 	 byte 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
 
-; 3 voice player:
+; 4 voice player:
 MUSWS1 bss 32
 MUSWS2 bss 32
 MUSWS3 bss 32
+MUSWS4 bss 32
 
 ; Reset voices and timers
 PLAY
@@ -221,9 +239,25 @@ PLAY
 	li   SG,SOUND
 	li   PNDX,SATRB+16
 	
+	lwpi MUSWS4
+	li   NTP,chomp
+	li   PTS,pt5
+	li   ATS,pulse
+	clr  DUR
+	li   PVID,>0000    ; pvid is encoded with pt5 list for ch3+noise7
+	li   VVID,>f000
+	li   SG,SOUND
+	li   PNDX,SATRB+20
+		
 	lwpi VDPWS
 	rt
 	
+; load a noise into channel 4	
+chomp
+    li   r0,SNDEAT
+	mov  r0,@MUSWS4
+	rt
+		
 ; to initialize:
 ;   bl   @play
 ; to give 1 unit of time:
@@ -250,10 +284,14 @@ MUSIC
 MUSIC1 DATA MUSWS1,MUSICX
 MUSIC2 DATA MUSWS2,MUSICX
 MUSIC3 DATA MUSWS3,MUSICX
+MUSIC4 DATA MUSWS4,MUSICX
 
 
 MUSICX
-	mov  R4,R4            duration timer. clear to start
+    mov  NTP,NTP    
+	jne  $+4
+    rtwp	
+	mov  DUR,DUR            duration timer. clear to start
 	jgt  label2
 label0
 ; new note
@@ -266,12 +304,12 @@ label0
 	mov  R7,r11           get note number*2 in R11
 	jeq  $+6
 	ai   R11,-96          ; get it in left visible area if not 0
-    ab   *r12,r11         ; append the y coord
-	mov  r11,*r12         ; update x,y
+    ab   *PNDX,r11        ; append the y coord
+	mov  r11,*PNDX        ; update x,y
 
 ; new duration
 	clr  r8
-	movb *R0+,R8          get new duration in r8
+	movb *NTP+,R8          get new duration in r8
 	jeq  finis
 
 ; special case: duration=255. add next word duration too
@@ -283,22 +321,23 @@ label0
 	jmp  du1
 	
 du0 srl  R8,3             times 32 .  32 is the neutral value of DEL
-du1	a    R8,R4            add, not mov, because time can go negative not just 0
+du1	a    R8,DUR            add, not mov, because time can go negative not just 0
 
-; bugfix: if R4 is at worst 1-DEL, R8 is at worst 32, if R8<DEL-1 then music may stall.
+; bugfix: if DUR is at worst 1-DEL, R8 is at worst 32, if R8<DEL-1 then music may stall.
 ; this could happen while playing 64th trills at faster than average tempo
-    jlt  label0
+    jlt  label0           ; go get another note to catch up
 	
 	jmp  label1
 	
 ; 0 duration terminates the sound list
 finis
-	dect R0               leave R0 pointing to the last (valid) note
+    clr  NTP              new way
+	; dect NTP            leave R0 pointing to the last (valid) note
 	li   R8,>0f00         silence
 	a    R6,R8            attn cmd byte
 
 	movb R8,*R10          write to sound chip
-	clr  r4               guard against tempo 
+	clr  DUR              guard against tempo 
 	rtwp
 label1
     mov  r7,r7
@@ -327,7 +366,7 @@ label2
 	movb *R2,R8           envelope first byte (N bytes in tail)
 	jeq  label4           no tail
 	srl  R8,3
-	c    R8,R4            R4 is counting down from duration*32
+	c    R8,DUR            DUR is counting down from duration*32
 	jgt  label3
 tail
 	li   R3,>003f         start envelope at 3fh-R8
@@ -369,5 +408,6 @@ label5
 	ab   R6,R8            add attn cmd byte
 	movb R8,*R10          write to sound chip
 label6
-	s    @DEL,R4        Subtract DEL from timer
+	s    @DEL,DUR        Subtract DEL from timer
 	rtwp
+

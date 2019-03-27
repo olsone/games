@@ -359,10 +359,15 @@ k2	limi 0
 	inct  r2
 	mov  r1,*r0+
 	mov  r2,*r0+
+; snd#4
+	ai   r1,>0800
+	inct  r2
+	mov  r1,*r0+
+	mov  r2,*r0+
 ; hoono sprites will go here	
 ; end the sprite list with >d0
-    li   r1,>d0d0
-    mov  r1,*r0+
+    li   r1,>d000
+    mov  r1,@satlst
     
 ; dancing sprite pats
     li   r0,sprpat+(8*dansch)
@@ -434,6 +439,7 @@ bzero equ $-1
 	BLWP @MUSIC1
 	BLWP @MUSIC2
 	BLWP @MUSIC3
+	BLWP @MUSIC4   ; noise uses channel 3
 
 	inc  r9      ; advance roller index
 	ci   r9,rolnom
@@ -455,12 +461,6 @@ bzero equ $-1
 ; animate hoonos
 hoono	bl @aninew
 
-    
-	; old
-	; bl @anihoo
-    ; jne  $+6
-	; bl   @newno    ; anihoo ended with rorapu.
-    
 ; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
 vsync:
        movb @vdpsta,r12
@@ -504,8 +504,13 @@ quick
 ; update roller patterns/colors (chars are already onscreen)
 	bl   @drarol
 	
+	bl   @kpax
+	a    r6,@DEL
 	
-; check for a key   
+	
+    jmp  next	
+ 
+; check for a key with kscan
 kloop
 	clr  r0
 	movb r0,@>8374      ; full keyboard mode
