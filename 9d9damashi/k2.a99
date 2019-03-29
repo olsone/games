@@ -208,14 +208,14 @@ vmdw1:
 	jne  vmdw1
 	rt
 	
-* write string, null terminated
+
 patasc equ PATTBL+>1500                  ; address to put ascii characters starting with space
 bias   equ >8000                         ; bias to add to ascii chars. 
 space  equ >2000+bias                    ; char code of the space character
 rowbeg equ NAMTBL+>200                   ; address of beginning row
 rowlst equ NAMTBL+>2E0                   ; address of bottom row
 rowend equ NAMTBL+>300                   ; address past bottom row
-
+* write string, null terminated
 vstr:
     ori  r0,>4000
     swpb r0
@@ -239,9 +239,6 @@ clrlst:
 	li   r2,32
     b    @vmsw
 	
-press text 'Paused-press any key'
-	byte 0
-
 
 * 83c2: interrupt flags
 * 0 disable interrupt
@@ -249,6 +246,9 @@ press text 'Paused-press any key'
 * 2 disable sound processing
 * 3 disable QUIT key
 
+
+press text 'Paused-press any key'
+	byte 0
 
 
 **************
@@ -376,6 +376,7 @@ pr3:
  copy "maze.a99"
  copy "kscan.a99"
  copy "sprites.a99"
+ copy "chardefs.a99"
  end
  
  

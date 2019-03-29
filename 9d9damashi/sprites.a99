@@ -30,15 +30,22 @@ satlst equ satrho+(nhoono*4)   ; end of list compare
 satrin equ satlst-12    ; new group starts 3 sprites before end
 
 satrln equ satlst-satrb+1 ; how much to copy to vdp ram
+
 ;
-; motion table
+; motion table ; constant offet from satrb
 ;
 ; y(byte),x(byte),countdown(word)
 ; move x,y per tick
+;
 motion bss 128
 moho   equ motion+(frstho*4)
 molast equ moho+(nhoono*4)
 moin   equ molast-12
+;
+; remember hootbl ptr (hoono#) for each sprite
+;
+hootyp bss nhoono*2
+
 ;
 ; 4 directions for sprites. y,x
 dirs   byte 0,1,>ff,0,0,>ff,1,0
@@ -48,13 +55,6 @@ eight  data 8
 mazdir data 1,-chrwid,-1,chrwid
        data 1,-chrwid,-1,chrwid   ; repeat
 
-;
-; sprite pattern numbers
-;
-munkch equ >00         ; munku man spr char def   : 4*3
-hoonch equ >10         ; first hoono spr char def : 20*8
-nextch equ >b0         ; next free
-dansch equ >f0         ; first dancing sprite char def : 9
 
 ; register equates
 hoono#  equ  4     ; hoono# * 4 register
@@ -71,7 +71,7 @@ moptr   equ  5     ; motion table pointer register
 ; register usage:
 ;
 ; r0,r1,r2,r3
-; r4 hoono# * 4
+; r4 hootbl ptr (hoono#)
 ; r5 ptr into motion
 ; r6 sptr into satrb
 ; r7 constant >7e00
@@ -80,27 +80,41 @@ newhoo
     mov  r11,r10
 	; move sprite table up by 3 entries
 	; move motion table up by 3 entries
+	; move hootyp up by 3 entries
 	li   sptr,satrho
 	li   moptr,moho
-	li   r2,(nhoono-3)*4
+	li   hoono#,hootyp
+	li   r2,(nhoono-3)
 newho0
 	mov  @12(sptr),*sptr+
+	mov  @12(sptr),*sptr+
 	mov  @12(moptr),*moptr+
-	dect r2
+	mov  @12(moptr),*moptr+
+	mov  @6(hoono#),*hoono#+
+	dec  r2
 	jne  newho0
-; let r4 = hoono# 
+	
+	
+	
+; let r4 = hoono# ptr into hootbl
 	bl   @rng
 	mov  r13,hoono#    
 	
-	andi hoono#,>3f       ; there are actually 20 to choose from
-	li   r2,>14
+	andi hoono#,>3f       ; there are actually 29 to choose from
+	li   r2,hoomax
 mod0
     c    hoono#,r2
     jl   mod1
-    s    r2,hoono#        ; 64 modulo 20 makes the first 4 more likely
+    s    r2,hoono#        ; 64 modulo 20 left the first 4 more likely
 	jmp  mod0
 mod1
-    sla  hoono#,2         ; hoono# * 4
+    sla  hoono#,3         ; hoono# * 8
+	ai   hoono#,hootbl
+; set new hootyp
+    li   r0,hootyp+(nhoono*2)-6
+    mov  hoono#,*r0+
+    mov  hoono#,*r0+
+    mov  hoono#,*r0+
 	
 ; pick 3 locations for new hoonos.
 ; row 2, col 0-15 search.
@@ -113,6 +127,8 @@ newho1
     mov  r13,r1
     andi r1,>f          ; this is actually less than chrwid
 ; search for a spot in chrbuf
+; r2 starting column
+; r7 constant >7e00
     mov  r1,r2
 	li   r7,>7e00
 newho2
@@ -128,15 +144,19 @@ newho2
 	clr  *sptr+
 	clr  *moptr+
 	clr  *moptr+
-	jmp  newho7
+	jmp  newho8
 	
 newho3
 ; choose a direction  away from *r0
     clr  *moptr
-
+; check for stationary
+    mov  *hoono#,r1
+	srl  r1,1
+	jeq  newho6
+	
+	
+; registers below:	
 ; r1 direction*2
-; r2 starting column
-; r7 constant >7e00
 	mov  r13,r1
 	andi r1,6
 ; does it give?
@@ -179,26 +199,34 @@ newho6
 	mov  r3,*sptr+
 	s    r2,r3         ; clear the x for next loop. is szc faster? 
 	
-	; hoono color
-    
-    mov  r13,r2
-	swpb r2            ; avoid correlation without another bl @rng
-    andi r2,>3         ; random color 0-3
-	
-	a    hoono#,r2     ; hoono# * 4 + 0-3
-
-    mov hoono#,r1
-	sla  r1,1         ; hoono# * 8 (there are 8 animation frames)
-	ai   r1,hoonch    ; number of first sprite char for hoonos
+; hoono char and color
 	mov  r13,r0
-	srl  r0,3
-	andi r0,7
-	a    r0,r1        ; add 0-7 to the char# so they don't all look alike
-    movb @hoonoc(r2),r1 ; put color in same word
-    swpb r1           ; -> char then color
-	mov  r1,*sptr+
+	andi r0,>c         ; 0,4,8,12
+	mov  @offcolor(hoono#),r2
+	src  r2,0
+	andi r2,>f         ; select a random nybble
+; check for directional
+    mov  *hoono#,r0
+	srl  r0,2
+	jeq  nospin
+; add direction to char
+	sla  r1,7
+    a    r1,r2
+nospin	
+    ab   @offchr(hoono#),r2
+	mov  r13,r0
+	movb @offchr+1(hoono#),r1
+	ai   r1,>ff00
+	sb   r2,r1        ; # of frames/sprite
+	jeq  newho7       ; else r1 is a mask like 1,3,7
+    szc  r13,r1       ; clear some random bits
+	ab   r1,r2        ; add some random frames so they don't all start alike
+	; TODO: this can't work when there are directional sprites
+	; TODO: use offflg
+newho7    
+	mov  r2,*sptr+
     
-newho7
+newho8
 
 	ci   sptr,satrin+12  ; loop?	
 	jl   newho1          ; make another one
@@ -209,6 +237,7 @@ newho7
 ;
 ;
 ; register usage
+;   r4  hootyp ptr (ptr to ptr)
 ;   r5  motion table pointer
 ;   r6  satrb loop pointer
 ;   r10 rt address
@@ -216,8 +245,10 @@ newho7
 ; subroutines:
 ;   rorapu r0-r5
 
-aninew 	 mov  r11,r10
+aninew 	 
+    mov  r11,r10
     li   sptr,satrho
+	li   hoono#,hootyp
 
 anino0
 	li   r3,>0100  ; constant
@@ -225,8 +256,8 @@ anino0
 	
 	mov  *sptr,r2    ; fetch y,x
 	jne  $+6
-	inct sptr
-	jmp  anino2      ; inactive sprite. next
+	inct sptr        ; point at pat,color
+	jmp  anino3      ; inactive sprite. next
 	
 	a    r3,r2
 	mov  r2,*sptr+
@@ -236,7 +267,7 @@ anino0
 	ci   r2,>bf00  ; offscreen
     jh   anino1    ; it's somewhere offscreen still
     ci   r2,>7700  
-    jh   anino3    ; it has reached the bottom
+    jh   anino4    ; it has reached the bottom
 	; it's in the roller region
 	; horizontal checks
 	andi r2,>ff
@@ -253,51 +284,50 @@ anino0
 	ai   r1,>0300  ; add sickly green bg nybble
 	bl   @rorapu   ; clobbers r0-r5
 	bl   @chomp    ; make sound
-    jmp  anino3
+    jmp  anino4
 	
 anino1
+; next animation frame
 	coc  r7,r14    ; animate every 8 ticks
 	jne  noani     ; not animation time
-	swpb r7        ; constant >0700
-	coc  r7,r1
-	jne  $+6
-	szc  r7,r1     ; change 0700 to 00
-	jmp  $+4
-	a    r3,r1     ; next charpat
+	mov  *hoono#,r2 ; *(ptr to ptr)
+	ab   @offinc(r2),r1     ; next charpat
+	cb   @offchrlst(r2),r1
+	jne  anino2
+	movb @offchr(r2),r1
+anino2
 	mov  r1,*sptr  ; update pattern#,color
 noani
     srl  r7,2
 	coc  r7,r14
-	jne  nomo1
-; motion time
+	jne  nomo
+	
+; motion time. moptr is computed from sptr in each loop.
     mov  sptr,moptr
 	ai   moptr,motion-satrb-2
     mov  *moptr,r0
-	jeq  nomo1
+	jeq  nomo
 	dec  *moptr+
-	ab   *moptr+,@-2(sptr)
-	ab   *moptr+,@-1(sptr)
-	jmp  nomo2
-nomo1
-    inct moptr
-nomo2
-    inct moptr
+	dect sptr     ; go  back to xy
+	ab   *moptr+,*sptr+
+	ab   *moptr,*sptr+
+nomo
+
         
-anino2
-; next
+anino3
+; next. sptr pointing at chr-color still
     inct sptr
+    inct hoono#
 	ci   sptr,satlst
 	jl   anino0    ; loop
 ; return
 	b    *r10
 	
-; clear entry
-anino3
-    dect sptr
+; clear entry because it reached bottom or got rolled up
 anino4
-	clr  *sptr+
-	clr  *sptr+
-    jmp anino0
+	clr  @-2(sptr)
+	clr  *sptr
+    jmp anino3
 
 
 	
