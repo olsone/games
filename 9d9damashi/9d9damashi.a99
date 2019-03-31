@@ -342,7 +342,7 @@ k2	limi 0
     mov  r2,*r0+
 ; snd 1,2,3	
 ; snd#1 sprite
-    li   r1,>50c0        ; y,x
+    li   r1,>80c0        ; y,x
 	li   r2,>f003        ; pat,color
 	mov  r1,*r0+
 	mov  r2,*r0+
@@ -729,4 +729,7 @@ rolclr bss rolsiz
 ;    21 hoono sprites in maze
 ;
 ; 3/25/19 add the noise channel (and sprite). buggy. call kpax for tempo.
+;
+; 3/27/19 move all the sprites into chardefs.a99. make hootbl define sprite behavior. 
+; new flags for stationary, directional. add Attack ships, Tombstone city, Amazeing, more.
 

@@ -4,7 +4,7 @@
 ;  bl @newrow 9 times
 ;
 ; each 48 ticks, bl @newrow 2 times to refill chrbuf
-; (24 would work except we want odd/even frame buffer)
+; (24 was tried, except we want odd/even frame buffer each 8 ticks. chardefs are written before odd/even SIT.)
 
 ; tile bits:
 ; 00 unused (empty?)
@@ -32,8 +32,8 @@ chrbuf bss  chrsiz  ; chars for maze
 ; move everything down 3 rows in chrbuf.
 ; generate 3 new rows of chars at the top of chrbuf.
 ;
-; finally set MAZROW to 24
-; so that the effect of drawing with MAZROW=24 should match MAZROW=0
+; finally set MAZROW to 48
+; so that the effect of drawing with MAZROW=24 or 48 should match MAZROW=0
 ;
 ; call NEWROW after drawing the image for MAZROW=1
 ;
@@ -214,10 +214,10 @@ tiro42 inc  bufreg
 	   
        b    *r10	   
 
-MAZROW data 0         ; counter. 0-15 indicate pixel index; >>3 is row index into chrbuf (mpy by 18)
+MAZROW data 0         ; counter. 0-15 indicate index into one scrolling chardef; >>3 is row index into chrbuf (mpy by 18)
 MAZR11 data 0         ; save r11
 ; DRAMAZ
-; increment mazrow
+; decrement mazrow
 ; copy maze chars into namtbl
 ;
 ; call DRAMAZ each tick. in this primitive form it only changes the graphics each 8 ticks.
@@ -347,7 +347,15 @@ dramzx dec  @mazrow
 	   bl   @newrow      ; sets mazrow to 24. keep buf and screen in sync please
 	   bl   @newrow      
 	   bl   @newhoo      ; 3 new hoonos every other tile row
-	   
+
+; that's two sets of the same hoono. next!	   
+	   inc  @hoonxt
+	   li   r0,hoomax
+	   c    @hoonxt,r0
+	   jlt  $+6
+	   clr  @hoonxt
+	
+   
 dramzz mov @mazr11,r11
        rt
 	   

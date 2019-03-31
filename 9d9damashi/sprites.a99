@@ -55,11 +55,11 @@ eight  data 8
 mazdir data 1,-chrwid,-1,chrwid
        data 1,-chrwid,-1,chrwid   ; repeat
 
-
+hoonxt data 0     ; next hoono counter
 ; register equates
-hoono#  equ  4     ; hoono# * 4 register
-sptr    equ  6     ; satrb loop pointer register
-moptr   equ  5     ; motion table pointer register
+hoono# equ  4     ; hoono# * 4 register
+sptr   equ  6     ; satrb loop pointer register
+moptr  equ  5     ; motion table pointer register
 ;
 ; newhoo
 ;
@@ -93,21 +93,23 @@ newho0
 	mov  @6(hoono#),*hoono#+
 	dec  r2
 	jne  newho0
+
+	mov  @hoonxt,hoono#
 	
 	
-	
+; random hoono	
 ; let r4 = hoono# ptr into hootbl
 	bl   @rng
-	mov  r13,hoono#    
+;	mov  r13,hoono#    
 	
-	andi hoono#,>3f       ; there are actually 29 to choose from
-	li   r2,hoomax
-mod0
-    c    hoono#,r2
-    jl   mod1
-    s    r2,hoono#        ; 64 modulo 20 left the first 4 more likely
-	jmp  mod0
-mod1
+;	andi hoono#,>3f       ; there are actually 29 to choose from
+;	li   r2,hoomax
+;mod0
+;    c    hoono#,r2
+;    jl   mod1
+;    s    r2,hoono#        ; 64 modulo 20 left the first 4 more likely
+;	jmp  mod0
+;mod1
     sla  hoono#,3         ; hoono# * 8
 	ai   hoono#,hootbl
 ; set new hootyp
@@ -152,7 +154,7 @@ newho3
 ; check for stationary
     mov  *hoono#,r1
 	srl  r1,1
-	jeq  newho6
+	joc  newho6
 	
 	
 ; registers below:	
@@ -205,15 +207,19 @@ newho6
 	mov  @offcolor(hoono#),r2
 	src  r2,0
 	andi r2,>f         ; select a random nybble
+; starting char
+    ab   @offchr(hoono#),r2
 ; check for directional
     mov  *hoono#,r0
 	srl  r0,2
-	jeq  nospin
-; add direction to char
+	jnc  nospin
+; add direction/2 to char
+    andi r1,7
 	sla  r1,7
     a    r1,r2
+	jmp  newho7
 nospin	
-    ab   @offchr(hoono#),r2
+; add a random frame count
 	mov  r13,r0
 	movb @offchr+1(hoono#),r1
 	ai   r1,>ff00
@@ -221,9 +227,8 @@ nospin
 	jeq  newho7       ; else r1 is a mask like 1,3,7
     szc  r13,r1       ; clear some random bits
 	ab   r1,r2        ; add some random frames so they don't all start alike
-	; TODO: this can't work when there are directional sprites
-	; TODO: use offflg
 newho7    
+	; TODO: use offflg size2
 	mov  r2,*sptr+
     
 newho8

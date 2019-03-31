@@ -1,12 +1,165 @@
+; 
 ; hoonos are the munchman ghosts.
-; this file contains sprites as well from tombstone city, chisholm trail, a-maze-ing.
-; now they are all called hoonos.
+; this is a table of all the combinations of chars, colors, and behavior attributes.
+;
+; Other sprites are from tombstone city, chisholm trail, a-maze-ing.
+; In this program, they are all called hoonos.
 
-; all the munchman ghosts (hoonos)
+; all the munchman ghosts (hoonos) names
 
 ; from grom 0cd4
 ; there are 20 hoonos with 8 patterns each.
-	 
+
+; table of hoono attributes
+; 2 flags
+;    >xx00 add to step to next animation frame: 0,1,2,3,4 (most 1)
+;    >0001 stationary
+;    >0002 add direction index to starting char (most 0) (TODO)
+;    >0004 double size (TODO)
+; 2  char# to lastchar#+1 if animated   (e.g. 0810)
+; 2  4 color nybbles packed, random
+; 2  ptr to name for king to say
+; TODO: animation speed, movement speed
+; total: 8 bytes each
+
+offinc equ 0
+offflg equ 1
+offchr equ 2
+offchrlst equ 3
+offcolor equ 4
+offstr equ 6
+
+
+;  5 cars and carcasses II
+;  3 amazeing
+;  1 alpiner
+;  4 tombstone city
+;  1 chisholm trail
+;  2 the attack
+; 20 munchman
+;  6 ti invaders
+;  2 ET at sea
+;  5 microsurgeon
+
+hoomax equ 49
+
+hootbl
+; microsurgeon. all stationary.
+      data >0101,>d0d8,>6666 ; worm
+	  data zstr31
+      data >0101,>d8dc,>cccc ; bacteria
+	  data zstr31
+	  data >0001,>dcdd,>e9e9 ; blood vessel, red or gray
+	  data zstr31
+	  data >0001,>ddde,>e9e9 ; blood vessel 2, red or gray
+	  data zstr31
+	  data >0101,>dee0,>ffff ; plaque
+	  data zstr31
+	  
+; a-maze-ing (no animation)
+      data >0000,>b0b1,>8844 ; red or blue mouse
+      data zstr20
+      data >0001,>b2b3,>ffff ; yellow cheese changed to white to show up
+      data zstr20
+      data >0000,>b1b2,>1116 ; cat, black or orange
+      data zstr20
+; Cars and Carcasses II (Not Polyoptics). when was there ever a I?
+; Was the inspiration for this mashup.
+; The Not Polyoptics lineup were distribued by TI on cassette/disk very early on.
+      data >0002,>c4c8,>ffff
+	  data zstr25            ; white car (directional)
+      data >0001,>c9ca,>6666 ; stationary zombie
+      data zstr26
+      data >0001,>c9ca,>4444 ; stationary monster
+      data zstr27
+      data >0001,>c9ca,>1111 ; stationary vampire
+      data zstr28
+      data >0001,>c9ca,>2ccc ; stationary tree
+      data zstr29
+; alpiner
+      data >0001,>b3b4,>1111 ; boot. should it walk?
+      data zstr21
+; tombstone city
+      data >0100,>b4b6,>cccc ; martian b4-b5
+      data zstr22
+      data >0100,>b6b8,>dddd ; tumbleweed magenta
+      data zstr22
+      data >0001,>bcbd,>1122 ; cactus
+      data zstr22
+      data >0002,>b8bc,>4444 ; ship, directional
+      data zstr22
+
+; chisholm trail / texas(munchman)
+      data >0001,>c3c4,>4444 ; texas
+      data zstr23
+; attack
+      data >0002,>bdc1,>5555 ; ship
+	  data zstr24
+	  data >0100,>c1c3,>dddd ; spore
+	  data zstr24
+	  
+; pinwheel / kazaguruma
+      data >0100,>0008,>c84d ; dk green, md red, dk blue, magenta
+      data zstr00  
+      data >0100,>0810,>5749 ; lt blue, cyan, dk blue, lt red
+      data zstr01
+      data >0100,>1018,>6661 ; dk red, black
+      data zstr02  
+      data >0100,>1820,>dd33 ; magenta, lt green (grapes!)
+      data zstr03  
+      data >0100,>2028,>8881 ; md red, black
+      data zstr04  
+      data >0100,>2830,>c94d ; dk green, lt red, dk blue, magenta
+      data zstr05  
+      data >0100,>3038,>ffff ; white
+      data zstr06
+      data >0100,>3840,>c94d ; dk green, lt red, dk blue, magenta
+	  data zstr07
+      data >0100,>4048,>c94d ; dk green, lt red, dk blue, magenta
+	  data zstr08
+      data >0100,>4850,>ffff ; white
+	  data zstr09
+; hoonos 10-19
+      data >0100,>5058,>c94d ; dk green, lt red, dk blue, magenta
+	  data zstr10
+      data >0100,>5860,>c94d 
+	  data zstr11
+      data >0100,>6068,>c94d 
+	  data zstr12
+      data >0100,>6870,>c94d 
+	  data zstr13
+      data >0100,>7078,>c94d 
+	  data zstr14
+      data >0100,>7880,>c94d 
+	  data zstr15
+      data >0100,>8088,>c94d 
+	  data zstr16
+      data >0100,>8890,>c94d 
+	  data zstr17
+      data >0100,>9098,>c94d 
+	  data zstr18
+      data >0100,>98a0,>c94d 
+	  data zstr19
+
+; ti invaders
+      data >0100,>e0e2,>8888 ; first invader
+      data zstr32
+      data >0100,>e2e4,>5555 ; 2nd invader
+      data zstr32
+      data >0100,>e4e6,>2222 ; 3rd invader
+      data zstr32
+      data >0000,>e6e7,>7777 ; base
+      data zstr32
+      data >0001,>e7e8,>dddd ; base blasted
+      data zstr32
+      data >0001,>e8e9,>dddd ; base blasted
+      data zstr32
+; ET at sea
+      data >0100,>ccce,>ffff ; iceberg
+	  data zstr30
+      data >0100,>ced0,>ffff ; hurricane
+	  data zstr30
+
 ; ENGLISH    JAPANESE	 
 ;
 ; pinwheel   kazaguruma  風車
@@ -31,6 +184,7 @@
 ; chinese    Chūgokujin  中国人
 ; mine       Jiraigen 地雷原  Hoshi 星
 
+; the King speaks Japanese natively. Therefore the Munchman names are in Japanese (mostly)
 zstr00 text 'Pinwheel'
        byte 0
 zstr01 text 'Banpa'
@@ -79,131 +233,8 @@ zstr18 text 'Chugoku'
        byte 0
 zstr19 text 'Jiraigen'
        byte 0
-
 		
-; favorite hoono colors: 4 choices each, packed in nybbles
-hoonoc
-      data >c84d ; dk green, md red, dk blue, magenta
-      data >5749 ; lt blue, cyan, dk blue, lt red
-      data >6661 ; dk red, black
-      data >dd33 ; magenta, lt green (grapes!)
-      data >8881 ; md red, black
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >ffff ; white
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >ffff ; white
-	  
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-      data >c94d ; dk green, lt red, dk blue, magenta
-
-; table of monster attributes
-; 2 flags
-;    >xx00 add to step to next animation frame: 0,1,2,3,4 (most 1)
-;    >0001 stationary
-;    >0002 add direction index to starting char (most 0) (TODO)
-;    >0004 double size (TODO)
-; 2  char# to lastchar#+1 if animated   (e.g. 0810)
-; 2  4 color nybbles packed, random
-; 2  ptr to name for king to say
-; TODO: animation speed, movement speed
-; total: 8 bytes each
-
-offinc equ 0
-offflg equ 1
-offchr equ 2
-offchrlst equ 3
-offcolor equ 4
-offstr equ 6
-
-; 11 from around
-; 20 from munchman
-; --
-; 29 total
-hoomax equ 31
-
-hootbl
-; a-maze-ing (no animation)
-      data >0000,>b0b1,>8844 ; red or blue mouse
-      data zstr20
-      data >0001,>b2b3,>bbbb ; yellow cheese
-      data zstr20
-      data >0000,>b1b2,>1116 ; cat, black or orange
-      data zstr20
-; alpiner
-      data >0000,>b3b4,>1111 ; boot
-      data zstr21
-; tombstone city
-      data >0100,>b4b6,>cccc ; martian b4-b5
-      data zstr22
-      data >0100,>b6b8,>dddd ; tumbleweed magenta
-      data zstr22
-      data >0001,>bcbd,>1333 ; cactus
-      data zstr22
-      data >0002,>b8bc,>4444 ; ship
-      data zstr22
-
-; chisholm trail / munchman texas
-      data >0001,>c3c4,>4444 ; texas
-      data zstr23
-; attack
-      data >0002,>bdf1,>5555 ; ship
-	  data zstr24
-	  data >0100,>c1c2,>dddd ; spore
-	  data zstr24
-	  
-; pinwheel / kazaguruma
-      data >0100,>0008,>c84d ; dk green, md red, dk blue, magenta
-      data zstr00  
-      data >0100,>0810,>5749 ; lt blue, cyan, dk blue, lt red
-      data zstr01
-      data >0100,>1018,>6661 ; dk red, black
-      data zstr02  
-      data >0100,>1820,>dd33 ; magenta, lt green (grapes!)
-      data zstr03  
-      data >0100,>2028,>8881 ; md red, black
-      data zstr04  
-      data >0100,>2830,>c94d ; dk green, lt red, dk blue, magenta
-      data zstr05  
-      data >0100,>3038,>ffff ; white
-      data zstr06
-      data >0100,>3840,>c94d ; dk green, lt red, dk blue, magenta
-	  data zstr07
-      data >0100,>4048,>c94d ; dk green, lt red, dk blue, magenta
-	  data zstr08
-      data >0100,>4850,>ffff ; white
-	  data zstr09
-; hoonos 10-19
-      data >0100,>5058,>c94d ; dk green, lt red, dk blue, magenta
-	  data zstr10
-      data >0100,>5860,>c94d 
-	  data zstr11
-      data >0100,>6068,>c94d 
-	  data zstr12
-      data >0100,>6870,>c94d 
-	  data zstr13
-      data >0100,>7078,>c94d 
-	  data zstr14
-      data >0100,>7880,>c94d 
-	  data zstr15
-      data >0100,>8088,>c94d 
-	  data zstr16
-      data >0100,>8890,>c94d 
-	  data zstr17
-      data >0100,>9098,>c94d 
-	  data zstr18
-      data >0100,>98a0,>c94d 
-	  data zstr19
-
-zstr20 text 'AMazeIng'
+zstr20 text 'A-Maze-Ing'
       byte 0	  
 zstr21 text 'Alpiner'
       byte 0	  
@@ -212,5 +243,21 @@ zstr22 text 'Tumstonu'
 zstr23 text 'Tekisasu'
       byte 0	  
 zstr24 text 'Attacku'
+      byte 0
+zstr25 text 'Car!'
+      byte 0
+zstr26 text 'Zombie'
+      byte 0	  
+zstr27 text 'Carcass!'
+      byte 0	  
+zstr28 text 'Vampire'
+      byte 0	  
+zstr29 text 'Tree!'
+      byte 0	  
+zstr30 text 'E.T., E.T.'	
+      byte 0  
+zstr31 text 'Doc'
+      byte 0
+zstr32 text 'Supesu Inbeda'
       byte 0
 	  
