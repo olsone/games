@@ -60,6 +60,67 @@ hoonxt data 0     ; next hoono counter
 hoono# equ  4     ; hoono# * 4 register
 sptr   equ  6     ; satrb loop pointer register
 moptr  equ  5     ; motion table pointer register
+
+
+inispr
+	
+; initialize satr
+; munchman sprite	
+	li   r0,satrb
+	li   r1,>777c        ; y,x
+	mov  r1,*r0+
+	li   r2,(munkch+4)*256+12        ; pat,color
+    mov  r2,*r0+
+; munchman background
+	mov  r1,*r0+
+	ai   r2,>0302        ; background, grey
+    mov  r2,*r0+
+; snd 1,2,3	
+; snd#1 sprite
+    li   r1,>8000        ; y,x
+	li   r2,>ff03        ; pat,color
+	mov  r1,*r0+
+	mov  r2,*r0+
+; snd #2
+	ai   r1,>0800
+	inct  r2
+	mov  r1,*r0+
+	mov  r2,*r0+
+; snd#3
+	ai   r1,>0800
+	inct  r2
+	mov  r1,*r0+
+	mov  r2,*r0+
+; snd#4
+	ai   r1,>0800
+	inct  r2
+	mov  r1,*r0+
+	mov  r2,*r0+
+; hoono sprites will go here	
+    li   r2,nhoono
+inisp2
+	mov  @nullsp,*r0+
+	mov  @nullsp+2,*r0+
+	dec  r2
+	jne  inisp2
+; end the sprite list with >d0
+    li   r1,>d000
+;    mov  r1,@satlst
+    mov  r1,*r0
+; init mo
+    li   r0,motion
+    clr  *r0+
+    ci   r0,molast
+    jne  $-6	
+; init hootyp?
+    rt
+
+
+nullsp data >8000,>ff00
+
+
+
+
 ;
 ; newhoo
 ;
@@ -94,15 +155,17 @@ newho0
 	dec  r2
 	jne  newho0
 
+; sequential hoono
 	mov  @hoonxt,hoono#
-	
+	andi hoono#,>fc
+    sla  hoono#,1        ; hoonxt count 4 ticks, hootbl index by 8
 	
 ; random hoono	
 ; let r4 = hoono# ptr into hootbl
 	bl   @rng
 ;	mov  r13,hoono#    
 	
-;	andi hoono#,>3f       ; there are actually 29 to choose from
+;	andi hoono#,>3f       ; there were actually 20 to choose from
 ;	li   r2,hoomax
 ;mod0
 ;    c    hoono#,r2
@@ -110,7 +173,8 @@ newho0
 ;    s    r2,hoono#        ; 64 modulo 20 left the first 4 more likely
 ;	jmp  mod0
 ;mod1
-    sla  hoono#,3         ; hoono# * 8
+;    sla  hoono#,3         ; hoono# * 8
+
 	ai   hoono#,hootbl
 ; set new hootyp
     li   r0,hootyp+(nhoono*2)-6
@@ -238,7 +302,7 @@ newho8
 	b    *r10
 	
 ;
-; animate all the sprites - new
+; animate all the sprites
 ;
 ;
 ; register usage
@@ -263,23 +327,32 @@ anino0
 	jne  $+6
 	inct sptr        ; point at pat,color
 	jmp  anino3      ; inactive sprite. next
-	
-	a    r3,r2
-	mov  r2,*sptr+
-	mov  *sptr,r1    ; fetch pattern, color
-	ci   r2,>5a00  ; y coordinate of roller
-	jl   anino1    ; not there yet
-	ci   r2,>bf00  ; offscreen
+
+    a    r3,r2
+    mov  r2,*sptr+	
+    mov  *sptr,r1    ; fetch pattern, color
+; check for x out of bounds
+    mov  r2,r0
+	swpb r0
+	ci   r0,>4000
+	jl   anino4
+	ci   r0,>b800
+	jh   anino4
+; check y conditions	
+    c    r2,@rolly1  ; y coordinate of roller
+    jl   anino1    ; not there yet
+    ci   r2,>bf00  ; offscreen
     jh   anino1    ; it's somewhere offscreen still
-    ci   r2,>7700  
-    jh   anino4    ; it has reached the bottom
+	ci   r2,>7700
+	jh   anino4    ; it has  reached the bottom
+	
 	; it's in the roller region
-	; horizontal checks
-	andi r2,>ff
-	ai   r2,->0068 ; x relative to roller left edge	
-	jlt  anino1    ; passing left of roller
-	ci   r2,>2f    ; width of roller
-	jgt  anino1
+    andi r2,>ff
+    ai   r2,->0068 ; x relative to roller left edge
+    jlt  anino1    ; passing left of roller
+    ci   r2,>2f    ; width of roller
+    jgt  anino1
+
 ; roll it up. Set r0=chardef ptr, r1=color
     mov  r1,r0     ; from char, get chardef ptr in sptr
     srl  r0,5      ; guaranteed that low nybble (color) is gone
@@ -320,7 +393,7 @@ nomo
 
         
 anino3
-; next. sptr pointing at chr-color still
+; next. sptr points at chr-color still
     inct sptr
     inct hoono#
 	ci   sptr,satlst
@@ -330,9 +403,65 @@ anino3
 	
 ; clear entry because it reached bottom or got rolled up
 anino4
-	clr  @-2(sptr)
-	clr  *sptr
+	mov  @nullsp,@-2(sptr)
+	mov  @nullsp+2,*sptr
     jmp anino3
-
-
 	
+animm
+; animate munchman sprite char
+    li   r7,>7      ; every 8 ticks
+	coc  r7,r14     
+	jne  animm2
+    li   r0,satrb+2
+	mov  *r0,r1
+	li   r2,>0300
+	ai   r1,>0100
+    coc  r2,r1     ; compare lower bits to 3	
+	jne  $+4
+	szc  r2,r1     ; change lower bits 3 to 0
+	mov  r1,*r0
+animm2
+	rt
+	
+; munkey
+;
+; press a key for munchman
+;
+; roller left-right
+;
+; munchman moves to the opposite side, starts "pushing"
+; count ticks to get to the actual move.
+; for instance, from 777c  y,x to right edge 68 to 98, really 90
+mchrrt  byte munkch
+mchrlf  byte munkch+8
+
+munkey
+    li   sptr,satrb
+	
+	mov  r4,r4
+	jeq  munke3
+	jgt  munke1
+    inc  *sptr
+	inc  @4(sptr)
+	cb   *sptr,@rollx2
+	jeq  munke4
+	movb @mchrlf,@2(sptr)
+	rt
+munke1	
+    dec  *sptr
+	dec  @4(sptr)
+	cb   *sptr,@rollx2
+	jeq  munke4
+	movb @mchrrt,@2(sptr)
+munke3
+    rt
+; reached edge - move the roller
+munke4
+; reset mm
+    mov @rolwid,r0
+    ai  r0,>f800
+	srl r0,1
+    ab  @rollx1,r0
+    movb r0,*sptr
+	
+	rt

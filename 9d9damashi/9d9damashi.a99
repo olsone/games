@@ -97,7 +97,14 @@ boxna1
 	 inct r12                ; finally advance r12 past last parameter
 	 b    *r12
 	 
-	 
+; begin to parameterize roller constants
+rolly1 data >5a00   ; top row (msb)
+rollx1 data >6800   ; left edge
+rollx2 data >9800   ; right edge
+rolwid data >3000
+
+mapx1  equ  >4000   ; left edge
+mapx2  equ  >b800   ; right edge - 8
 	
 
 ; so when setting bits, if index is 0-31, also copy to +75.
@@ -288,16 +295,12 @@ k2	limi 0
 
 	bl   @initg2
 
-* clear nametable
-    li   r0,>4000+namtbl
-	clr  r1
-	li   r2,768
-	bl   @vmsw
+    bl   @clrscr
 		
 * put character set in 3rd pat tbl, chars >80 to >be
  	li   r0,patasc
 	bl   @chara
-* TODO: put character set in 2nd third at chars >20 to >67 (magellan map is in top third there)
+* TODO: put character set in 2nd third at chars >20 to >67 (in the top third, magellan map is using that area)
 	
 * fill lower 3rd with spaces
     li   r0,rowbeg
@@ -305,11 +308,41 @@ k2	limi 0
 	li   r2,rowend-rowbeg
 	bl   @vmsw
 	
-* display a string to test
-    li   r0,rowlst
-	li   r1,welcom
-	bl   @vstr	
 
+; load sprite chardefs
+    li   r0,SPRPAT+(hoonch*8)
+	li   r1,hoonos
+	li   r2,256*8
+	bl   @vmbw
+    
+
+        
+; Load the King
+    li   r0,PATTBL+>0000 ; vdp table address 
+    li   r1,PCH0         ; magellan data address
+    li   r2,48           ; how many chars
+    bl   @INIMAG
+	
+    li   r0,COLTBL+>0000 ; vdp table address 
+    li   r1,CCH0         ; magellan data address
+    li   r2,48           ; how many chars
+    bl   @INIMAG
+; title branches to game
+    b    @title
+	
+game
+    bl   @clrscr	
+	bl   @inispr
+	
+; draw the king
+    li   r0,namtbl+>38    ; screen 2,25
+    bl   @dramap
+    data 0              ; map#	
+	
+    ;li   r0,namtbl+>20    ; screen 2,0
+    ;bl   @dramap
+    ;data 1              ; map#	
+	
 ; set up our playfield
      bl @boxnam
      data namtbl+>8,>8000,>0810
@@ -324,68 +357,7 @@ k2	limi 0
      bl @boxnam
      data namtbl+>18d,>6800,>0306
 	 
-; load sprite chardefs
-    li   r0,SPRPAT+(hoonch*8)
-	li   r1,hoonos
-	li   r2,256*8
-	bl   @vmbw
-	
-; satr- munchman sprite	
-	li   r0,satrb
-	li   r1,>777c        ; y,x
-	mov  r1,*r0+
-	li   r2,(munkch+8)*256+12        ; pat,color
-    mov  r2,*r0+
-; munchman background
-	mov  r1,*r0+
-	ai   r2,>0302        ; background, grey
-    mov  r2,*r0+
-; snd 1,2,3	
-; snd#1 sprite
-    li   r1,>80c0        ; y,x
-	li   r2,>f003        ; pat,color
-	mov  r1,*r0+
-	mov  r2,*r0+
-; snd #2
-	ai   r1,>0800
-	inct  r2
-	mov  r1,*r0+
-	mov  r2,*r0+
-; snd#3
-	ai   r1,>0800
-	inct  r2
-	mov  r1,*r0+
-	mov  r2,*r0+
-; snd#4
-	ai   r1,>0800
-	inct  r2
-	mov  r1,*r0+
-	mov  r2,*r0+
-; hoono sprites will go here	
-; end the sprite list with >d0
-    li   r1,>d000
-    mov  r1,@satlst
-    
-; Load the King
-    li   r0,PATTBL+>0000 ; vdp table address 
-    li   r1,PCH0         ; magellan data address
-    li   r2,48           ; how many chars
-    bl   @INIMAG
-	
-    li   r0,COLTBL+>0000 ; vdp table address 
-    li   r1,CCH0         ; magellan data address
-    li   r2,48           ; how many chars
-    bl   @INIMAG
-
-    li   r0,namtbl+>38    ; screen 2,25
-    bl   @dramap
-    data 0              ; map#	
-	
-    ;li   r0,namtbl+>20    ; screen 2,0
-    ;bl   @dramap
-    ;data 1              ; map#	
-	
-	li   r13,>8d54      ; rng seed
+	 li   r13,>8d54      ; rng seed
 	
 	clr r14             ; tick count
 	
@@ -403,27 +375,7 @@ loop
 
 ;  increase ticks
     inc  r14
-	
-; display r13 (rng) and r14 (ticks) and DEL and MAZROW
-	li   r0,>4000+namtbl+>2c0
-	bl   @setvad
-
-	mov  r13,r4
-	bl   @a2
-	jeq  $+2   ; create a byte constant 0 (insomnia)
-bzero equ $-1
-
-	mov  r14,r4
-	movb @bzero,*vd
-	bl   @a2
-
-	mov  @DEL,r4
-	movb @bzero,*vd
-	bl   @a2
-
-    mov  @mazrow,r4
-	movb @bzero,*vd
-	bl   @a2
+	; bl   @dracnt   ; draw all the counters to screen
 
 ; music playing step:
 	BLWP @MUSIC1
@@ -436,31 +388,13 @@ bzero equ $-1
 	jlt  $+4
 	clr  r9      ; reset index to 0
 
-; animate munchman sprite char in r8
-    li   r7,>7      ; every 8 ticks
-	coc  r7,r14     
-	jne  hoono
-    li   r0,satrb+2
-	mov  *r0,r1
-	li   r2,>0300
-	ai   r1,>0100
-    coc  r2,r1     ; compare lower bits to 3	
-	jne  $+4
-	szc  r2,r1     ; change lower bits 3 to 0
-	mov  r1,*r0
+    bl  @animm
+	
 ; animate hoonos
 hoono	bl @aninew
 
-; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
-vsync:
-       movb @vdpsta,r12
-       clr  r12
-vsync_1:
-       tb   2                          ; Test CRU bit for VDP interrupt
-       jeq  vsync_1
-       movb @vdpsta,r12
+    bl  @vsync     ; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
 
-	
 ; update sprites 
     li   r0,SPRATR
 	li   r1,satrb
@@ -667,19 +601,7 @@ ck2	movb r3,*vd
 ck3 rt
 	
 
-; lfsr rng	   state in r13
-; r13(15) = r13(0) xor r13(3)
-rng  mov r13,r0
- srl r0,3
- xor r13,r0
- srl r13,1
- andi r0,1
- src r0,1
- soc r0,r13
- rt
  
-
-	  
 welcom text '9d9damashi'
     byte 0
 
@@ -733,3 +655,6 @@ rolclr bss rolsiz
 ; 3/27/19 move all the sprites into chardefs.a99. make hootbl define sprite behavior. 
 ; new flags for stationary, directional. add Attack ships, Tombstone city, Amazeing, more.
 
+; 3/30/19 add microsurgeon, cars and carcasses, ti invaders, e.t. at sea.
+; hoonos not random anymore.
+; bugfixes: directional sprite, chomp sound

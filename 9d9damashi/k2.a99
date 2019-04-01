@@ -209,27 +209,36 @@ vmdw1:
 	rt
 	
 
-patasc equ PATTBL+>1500                  ; address to put ascii characters starting with space
+patasc2 equ PATTBL+>d00                  ; address to put ascii characters starting with space, in 2nd table
+patasc equ PATTBL+>1500                  ; address to put ascii characters starting with space, in 3rd table
 bias   equ >8000                         ; bias to add to ascii chars. 
 space  equ >2000+bias                    ; char code of the space character
 rowbeg equ NAMTBL+>200                   ; address of beginning row
 rowlst equ NAMTBL+>2E0                   ; address of bottom row
 rowend equ NAMTBL+>300                   ; address past bottom row
-* write string, null terminated
-vstr:
+
+* write string, null terminated, to vdp address
+* Usage:
+* bl @xstr
+* data address
+* data string pointer
+
+xstr:
+    mov  *r11+,r0
+	mov  *r11+,r1
     ori  r0,>4000
     swpb r0
 	movb r0,@VDPWA
 	swpb r0
 	movb r0,@VDPWA
-vstr1:
+xstr1:
 	movb *r1+,r2
-    jeq  vstr2
+    jeq  xstr2
 	ai   r2,bias
     movb r2,*vd
 	inc  r0
-    jmp  vstr1
-vstr2:  
+    jmp  xstr1
+xstr2:  
     rt
 
 * clear last row of screen	
@@ -239,14 +248,27 @@ clrlst:
 	li   r2,32
     b    @vmsw
 	
-
+* clear any row of screen	
+* data addr
+clrrow:
+    mov  *r11+,r0
+	li   r1,space
+	li   r2,32
+    b    @vmsw
+	
 * 83c2: interrupt flags
 * 0 disable interrupt
 * 1 disable sprite motion; 837A is number of sprites to move
 * 2 disable sound processing
 * 3 disable QUIT key
 
-
+* clear nametable
+clrscr
+    li   r0,>4000+namtbl
+	clr  r1
+	li   r2,768
+	b   @vmsw
+	
 press text 'Paused-press any key'
 	byte 0
 
@@ -288,6 +310,70 @@ sp4:
     movb r1,*vd
 	rt
 	
+; Pseudo-Random Number Generator
+;
+; Updates register R13 for random bits.
+; Uses: R0
+;
+; Implements simple lfsr.
+; r13(15) = r13(0) xor r13(3)
+;
+rng  mov r13,r0
+ srl r0,3
+ xor r13,r0
+ srl r13,1
+ andi r0,1
+ src r0,1
+ soc r0,r13
+ rt
+
+dracnt 
+    mov  r11,r10
+; display r13 (rng) and r14 (ticks) and DEL and MAZROW
+	li   r0,>4000+namtbl+>2c0
+	bl   @setvad
+
+	mov  r13,r4
+	bl   @a2
+	jeq  $+2   ; create a byte constant 0 (insomnia)
+bzero equ $-1
+
+	mov  r14,r4
+	movb @bzero,*vd
+	bl   @a2
+
+	mov  @DEL,r4
+	movb @bzero,*vd
+	bl   @a2
+
+    mov  @mazrow,r4
+	movb @bzero,*vd
+	bl   @a2
+	b    *r10
+; 
+; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
+;
+vsync:
+       movb @vdpsta,r12
+       clr  r12
+vsync_1:
+       tb   2                          ; Test CRU bit for VDP interrupt
+       jeq  vsync_1
+       movb @vdpsta,r12
+       rt
+	
+;
+; pause for r2 ticks, ?or key pressed
+;
+; kpax uses r0, r3-6, r10, r11, r12
+pauses li   r2,120
+pause  mov  r11,r10
+pause0 bl   @vsync
+	   dec  r2
+	   jne  vsync
+       b    *r10	 
+
+	  
 **************
 * debug 
 * shows caller's registers, pc, ws, st. (debug's r12 is shown as 'vd')
@@ -348,7 +434,7 @@ pr2:
 	bl   @clrlst
 
 	li   r1,press		; Paused-Press any key
-	bl   @vstr
+	bl   @xstr
 
 pr3:
 	clr  r2
@@ -368,6 +454,7 @@ pr3:
  
  
  copy "9d9damashi.a99"
+ copy "title.a99"
  copy "magellan.a99"
  copy "king/king.a99"
  copy "hoonos.a99"

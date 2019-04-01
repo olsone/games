@@ -338,4 +338,9 @@ Add the object file to a disk
 
 ../xdt99/xdm99.py  work.dsk -a k2.obj -f DF80
 
+TODO
 
+title screen
+new move (run away from you?)
+roller left right
+roller size

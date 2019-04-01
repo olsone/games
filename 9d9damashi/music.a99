@@ -202,10 +202,14 @@ DYT  byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	 byte 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
 
 ; 4 voice player:
-MUSWS1 bss 32
-MUSWS2 bss 32
-MUSWS3 bss 32
-MUSWS4 bss 32
+;MUSWS1 bss 32
+;MUSWS2 bss 32
+;MUSWS3 bss 32
+;MUSWS4 bss 32
+MUSWS1 EQU >8320
+MUSWS2 EQU >8340
+MUSWS3 EQU >8360
+MUSWS4 EQU >8380
 
 ; Reset voices and timers
 PLAY
@@ -397,7 +401,7 @@ envjmp
 * R8 msb is attn
 label5
 ; sprite pat
-	li   r11,>e101        ; (attn#+1)/2 -> pat, +>f0  (sorry skipping dansch equ)
+	li   r11,>ef01        ; (attn#+1)/2 -> pat, +>f7  (sorry skipping dansch equ)
 	ab   r8,r11
 	src  r11,1
 	movb r11,@2(r12)

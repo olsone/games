@@ -350,7 +350,7 @@ dramzx dec  @mazrow
 
 ; that's two sets of the same hoono. next!	   
 	   inc  @hoonxt
-	   li   r0,hoomax
+	   li   r0,hoomax*4
 	   c    @hoonxt,r0
 	   jlt  $+6
 	   clr  @hoonxt

@@ -16,6 +16,7 @@ SRCS= \
     maze.a99 \
     music.a99 \
     sprites.a99 \
+	title.a99 \
 
 MAIN=k2.a99
 LIST=k2.lst

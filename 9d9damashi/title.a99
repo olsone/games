@@ -1,0 +1,141 @@
+; title screen
+
+; black screen 
+; draw king
+
+; dialogue
+; sounds: thunder, fugue7777
+
+; munchman talks on this line
+mmln equ namtbl+>285
+
+title 
+* put character set in 2nd pat tbl, chars >80 to >be
+ 	li   r0,patasc2
+	bl   @chara
+
+; dialogue in 2nd third, because charset
+	bl   @xstr
+	data namtbl+>122
+	data dialog1
+	bl   @waitkey
+
+	bl   @xstr
+	data namtbl+>162
+	data dialog2
+    bl   @waitkey	
+; draw the king
+    li   r0,namtbl+>4b    ; screen 2,12
+    bl   @dramap
+    data 0              ; map#	
+; thunder! or fugue! or both!
+	bl   @waitkey
+	
+; dialogue
+	bl   @xstr
+	data namtbl+>1cc  ; screen 10,12
+	data dialog3
+	bl   @waitkey	
+; mm enters.. bleeping chains or not?
+	
+	; satr- munchman sprite	
+	li   r0,satrb
+	li   r1,>a9f8        ; y,x
+	mov  r1,*r0+
+	li   r2,(munkch+8)*256+12        ; pat,color
+    mov  r2,*r0+
+	
+title2
+	; update sprite
+    li   r0,SPRATR
+	li   r1,satrb
+	li   r2,4
+	bl   @vmbw
+; animate for 60 ticks
+    bl   @vsync
+	inc  r14
+	bl   @animm
+    dec  @satrb
+    li   r7,>7400
+	cb   @satrb+1,r7
+	jh   title2
+
+; 
+;	bl   @xstr
+;	data mmln  
+;	data dialog4      ; my name is munch man
+;   bl   @xstr
+;	data mmln+32  
+;	data dialog4b
+	
+	bl   @xstr
+	data namtbl+>2f1
+	data pressa
+    bl   @anykey	
+	
+	
+; clear all the dialog so far
+	li   r0, namtbl+>100
+    li   r1,space
+    li   r2,>200
+	bl   @vmsw
+	
+	bl   @xstr
+	data namtbl+>144  ; screen 
+	data dialog5
+	bl   @waitkey	
+
+	bl   @xstr
+	data namtbl+>162  ; screen 
+	data dialog6
+	bl   @waitkey	
+
+	bl   @xstr
+	data namtbl+>186  ; screen 
+	data dialog7
+	bl   @waitkey	
+
+	bl   @xstr
+	data namtbl+>1c5  ; screen 
+	data dialog8
+	bl   @waitkey	
+
+	bl   @xstr
+	data namtbl+>1e7  ; screen 
+	data dialog9
+	bl   @waitkey	
+
+
+
+	
+	bl   @xstr
+	data namtbl+>2f1
+	data pressa
+    bl   @anykey	
+	
+	
+ b @game      ; would clobber r10,r11 anyway
+
+dialog1 text 'Somewhere in 8-bit heaven...'
+ byte 0
+dialog2 text 'King Not Polyoptics commands      you to appear.'
+ byte 0
+dialog3 text 'Munku-Man!'
+ byte 0
+dialog4 text 'my name is'
+ byte 0
+dialog4b text 'munch man.'
+ byte 0
+dialog5 text 'Earth is full of Sprites.'
+ byte 0
+dialog6 text 'My oh my! We do love Sprites!'
+ byte 0
+dialog7 text 'To Earth, Munku-Man!'
+ byte 0
+dialog8 text 'Roll up all the Sprites!'
+ byte 0
+dialog9 text 'We will be watching.'
+ byte 0
+pressa text '[press any key]'
+ byte 0
+ 

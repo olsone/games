@@ -97,14 +97,14 @@ munkur data >3cea, >fe60, >60e6, >fe3c ; munchman right
        data >3c6a, >7ef0, >f07e, >7e3c  
 	   data >3cea, >fe7c, >7cfe, >fe3c 
 	   bss  8
-munkul data >3c57, >7f06, >0667, >7f3c ; munchman left
-	   data >3c56, >7e0f, >0f7e, >7e3c
-       data >3c57, >7f3e, >3e7f, >7f3c 
-	   bss  8
 munkuu data >0066, >e5c7, >c5ff, >7e66 ; munchman up
        data >0066, >e5e7, >fdff, >7e81  
        data >0066, >fdff, >fdff, >7e66
 	   data >007e, >ffff, >ffff, >7e00 ; background
+munkul data >3c57, >7f06, >0667, >7f3c ; munchman left
+	   data >3c56, >7e0f, >0f7e, >7e3c
+       data >3c57, >7f3e, >3e7f, >7f3c 
+	   bss  8
 munkud data >667e, >ffa3, >e3a7, >6600 ; munchman down
        data >187e, >ffbf, >e7a7, >6600
        data >667e, >ffbf, >ffbf, >6600
@@ -136,7 +136,7 @@ attack data >e0f0,>787f,>7f78,>f0e0    ; ship  dirs    bd,e,f,0
        data >8448,>4b33,>3438,>c0c0    ; spore         c1 
        data >2112,>d2cc,>2c1c,>0303    ; spore2        c2
 texas  data >3838,>3fff,>ff7e,>0c04    ; MM tekisasu   c3 	   
-cars   data >0000,>fefe,>fefe,>0000    ; car 16        c4
+cars   data >0000,>feee,>fefe,>0000    ; car 16        c4
        data >1c1c,>1c14,>1c1c,>1c00    ; car           c5
        data >0000,>fefe,>fefe,>0000    ; car           c6
        data >1c1c,>1c14,>1c1c,>1c00    ; car           c7
@@ -179,10 +179,20 @@ invadr data >3cff,>99ff,>ff24,>4266    ; first invader, 1 pixel truncated each e
 	   data >0808,>1c7e,>ffff,>ff66    ; gun base, truncated  e6
 	   data >0808,>1878,>fcfc,>fe62    ; gun base blasted
 	   data >0000,>0063,>e3f7,>ff63    ; gun base blasted     e8
-; take up slack
-	   bss  (>f0->e9)*8
+; zero zap e9-f0
+	   data >3c7e,>c3f3,>e7cf,>7e3c    ; 7 blue  
+	   data >3c66,>d3c3,>fbd3,>663c    ; 9 blue
+       data >3c66,>dbdf,>c3db,>663c    ; 6 green
+	   data >3c76,>e7c7,>93e7,>663c    ; 4 green
+	   data >3c76,>c7e7,>e7c3,>7e3c    ; 1 red
+       data >83c6,>6c38,>1c36,>63c1    ; X red
+	   data >3c66,>dbf7,>fbd3,>663c    ; 3 red
+	   data >3c66,>e3cd,>d9e3,>663c    ; 0 black?
 	   
-; >f0
+; take up slack
+	   bss  (>f7->f1)*8
+	   
+; >f7 - ff
 dance data >ffff,>ffff,>ffff,>ffff     ; attn 0
       data >00ff,>ffff,>ffff,>ffff
       data >0000,>ffff,>ffff,>ffff

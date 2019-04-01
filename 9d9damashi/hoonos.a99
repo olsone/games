@@ -30,73 +30,21 @@ offcolor equ 4
 offstr equ 6
 
 
-;  5 cars and carcasses II
-;  3 amazeing
-;  1 alpiner
-;  4 tombstone city
-;  1 chisholm trail
-;  2 the attack
-; 20 munchman
-;  6 ti invaders
-;  2 ET at sea
+;  2+1 the attack
 ;  5 microsurgeon
+;  3 amazeing
+;  4 tombstone city
+;  5 cars and carcasses II
+;  1 chisholm trail
+; 20 munchman
+;  1 alpiner
+;  6+3 ti invaders
+;  2 ET at sea
+;  7 zero zap
 
-hoomax equ 49
 
 hootbl
-; microsurgeon. all stationary.
-      data >0101,>d0d8,>6666 ; worm
-	  data zstr31
-      data >0101,>d8dc,>cccc ; bacteria
-	  data zstr31
-	  data >0001,>dcdd,>e9e9 ; blood vessel, red or gray
-	  data zstr31
-	  data >0001,>ddde,>e9e9 ; blood vessel 2, red or gray
-	  data zstr31
-	  data >0101,>dee0,>ffff ; plaque
-	  data zstr31
-	  
-; a-maze-ing (no animation)
-      data >0000,>b0b1,>8844 ; red or blue mouse
-      data zstr20
-      data >0001,>b2b3,>ffff ; yellow cheese changed to white to show up
-      data zstr20
-      data >0000,>b1b2,>1116 ; cat, black or orange
-      data zstr20
-; Cars and Carcasses II (Not Polyoptics). when was there ever a I?
-; Was the inspiration for this mashup.
-; The Not Polyoptics lineup were distribued by TI on cassette/disk very early on.
-      data >0002,>c4c8,>ffff
-	  data zstr25            ; white car (directional)
-      data >0001,>c9ca,>6666 ; stationary zombie
-      data zstr26
-      data >0001,>c9ca,>4444 ; stationary monster
-      data zstr27
-      data >0001,>c9ca,>1111 ; stationary vampire
-      data zstr28
-      data >0001,>c9ca,>2ccc ; stationary tree
-      data zstr29
-; alpiner
-      data >0001,>b3b4,>1111 ; boot. should it walk?
-      data zstr21
-; tombstone city
-      data >0100,>b4b6,>cccc ; martian b4-b5
-      data zstr22
-      data >0100,>b6b8,>dddd ; tumbleweed magenta
-      data zstr22
-      data >0001,>bcbd,>1122 ; cactus
-      data zstr22
-      data >0002,>b8bc,>4444 ; ship, directional
-      data zstr22
 
-; chisholm trail / texas(munchman)
-      data >0001,>c3c4,>4444 ; texas
-      data zstr23
-; attack
-      data >0002,>bdc1,>5555 ; ship
-	  data zstr24
-	  data >0100,>c1c3,>dddd ; spore
-	  data zstr24
 	  
 ; pinwheel / kazaguruma
       data >0100,>0008,>c84d ; dk green, md red, dk blue, magenta
@@ -140,25 +88,106 @@ hootbl
 	  data zstr18
       data >0100,>98a0,>c94d 
 	  data zstr19
+; attack
+      data >0002,>bdc1,>5555 ; ship
+	  data zstr24
+	  data >0100,>c1c3,>dddd ; spore
+	  data zstr24
+	  data >0100,>c1c3,>dddd ; spore
+	  data zstr24
+; microsurgeon. all stationary.
+      data >0101,>d0d8,>6666 ; worm
+	  data zstr31
+      data >0100,>d8dc,>cccc ; bacteria
+	  data zstr31
+	  data >0001,>dcde,>e9e1 ; blood vessel, red gray black. will this pick randomly?
+	  data zstr31
+	  data >0101,>dee0,>ffff ; plaque
+	  data zstr31
+	  
+; a-maze-ing (no animation)
+      data >0000,>b0b1,>8844 ; red or blue mouse
+      data zstr20
+      data >0001,>b2b3,>ffff ; yellow cheese changed to white to show up
+      data zstr20
+      data >0000,>b1b2,>1116 ; cat, black or orange
+      data zstr20
+
+; tombstone city
+      data >0001,>bcbd,>1122 ; cactus
+      data zstr22
+      data >0100,>b6b8,>dddd ; tumbleweed magenta
+      data zstr22
+      data >0002,>b8bc,>4444 ; ship, directional
+      data zstr22
+      data >0100,>b4b6,>cccc ; martian b4-b5
+      data zstr22
+
+; Cars and Carcasses II (Not Polyoptics). when was there ever a I?
+; Was the inspiration for this mashup.
+; The Not Polyoptics lineup were distribued by TI on cassette/disk very early on.
+      data >0002,>c4c8,>ffff
+	  data zstr25            ; white car (directional)
+      data >0001,>c9ca,>6666 ; stationary zombie
+      data zstr26
+      data >0001,>c9ca,>4444 ; stationary monster
+      data zstr27
+      data >0001,>c9ca,>1111 ; stationary vampire
+      data zstr28
+      data >0001,>c9ca,>2ccc ; stationary tree
+      data zstr29
+
+; chisholm trail / texas(munchman)
+      data >0001,>c3c4,>4444 ; texas
+      data zstr23
+	  
+
+; alpiner
+      data >0001,>b3b4,>1111 ; boot. should it walk?
+      data zstr21
 
 ; ti invaders
-      data >0100,>e0e2,>8888 ; first invader
+      data >0000,>e6e7,>7777 ; base
+      data zstr32
+      data >0100,>e0e2,>8888 ; 1st invader
+      data zstr32
+      data >0100,>e0e2,>8888 ; 1st invader
+      data zstr32
+      data >0100,>e2e4,>5555 ; 2nd invader
       data zstr32
       data >0100,>e2e4,>5555 ; 2nd invader
       data zstr32
       data >0100,>e4e6,>2222 ; 3rd invader
       data zstr32
-      data >0000,>e6e7,>7777 ; base
+      data >0100,>e4e6,>2222 ; 3rd invader
       data zstr32
       data >0001,>e7e8,>dddd ; base blasted
-      data zstr32
-      data >0001,>e8e9,>dddd ; base blasted
       data zstr32
 ; ET at sea
       data >0100,>ccce,>ffff ; iceberg
 	  data zstr30
       data >0100,>ced0,>ffff ; hurricane
 	  data zstr30
+; zero zap
+; some of the 16x16 numbers did fit well inside 8x8 discs
+	  data >0001,>eeef,>6666 ; X red
+	  data zstr33
+	  data >0101,>eef0,>6666 ; 3 / X red
+	  data zstr33
+      data >0001,>e9ea,>4444 ; 7 blue
+	  data zstr33
+	  data >0001,>eaeb,>4444 ; 9 blue
+	  data zstr33
+	  data >0101,>edef,>6666 ; 1 / X red
+	  data zstr33
+	  data >0001,>ebec,>cccc ; 6 green
+	  data zstr33
+      data >0001,>eced,>cccc ; 4 green
+	  data zstr33
+	  data >0001,>f0f1,>1111 ; 0 black
+	  data zstr33
+hooend
+hoomax equ (hooend-hootbl)/8
 
 ; ENGLISH    JAPANESE	 
 ;
@@ -261,3 +290,5 @@ zstr31 text 'Doc'
 zstr32 text 'Supesu Inbeda'
       byte 0
 	  
+zstr33 text 'ZeroZap Rulez'
+      byte 0

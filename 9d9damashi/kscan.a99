@@ -146,3 +146,35 @@ kpax8  li   r0,KEY_EQ     ; =+ keys, go faster
 	   inc  r6
 
 kpax9  b    *r10
+
+newbit data >2000
+
+anykey clr  r0
+	movb r0,@>8374      ; full keyboard mode
+    blwp @kscan
+	movb @STATUS,r2
+	li   r8,>2000
+	coc  @newbit,r2          ; is it a new key
+	jne  anykey
+	movb @>8375,r0
+    rt
+	
+; wait up to R2 ticks for a key	
+waitkey 
+    mov  r11,r10
+	li   r2,180
+waitk2
+    clr  r0
+	movb r0,@>8374      ; full keyboard mode
+    blwp @kscan
+	movb @STATUS,r0
+	coc  @newbit,r0          ; is it a new key
+	jeq  waitk3
+	bl   @vsync
+	dec  r2
+	jne  waitk2
+	clr  r0
+	b    *r10
+waitk3
+	movb @>8375,r0
+    b    *r10
