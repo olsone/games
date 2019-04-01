@@ -327,10 +327,17 @@ k2	limi 0
     li   r1,CCH0         ; magellan data address
     li   r2,48           ; how many chars
     bl   @INIMAG
+
+	; init music:
+    bl   @inimus
+
 ; title branches to game
     b    @title
 	
 game
+	; init music:
+    bl   @inimus
+
     bl   @clrscr	
 	bl   @inispr
 	
@@ -368,8 +375,8 @@ newrows:
 	dec  r8
 	jne  newrows
 	
-; setup music:
-    bl   @play
+; start music:
+    bl   @coda
 
 loop
 
@@ -454,7 +461,7 @@ kloop
 	ci  r2,'-'*256
     jeq tmpodn	
 	; any other key, start over
-    bl   @play
+    bl   @coda
 	jmp  next
 tmpoup
     inct @DEL
@@ -627,7 +634,7 @@ rolclr bss rolsiz
 ;    Reuse g2.a99
 ;    Implement roller.
 ;    Implement scrolling checkerboard field to test memory bandwidth.
-;    Write rororapu routine. Any key to smush hoonos, to test roller.
+;    Write rororapu routine. Any key to smush hoonos, to test roller. 
 ;    Sketched some hoonos.
 ; 2/24/2019
 ;    Made King in Magellan.
@@ -658,3 +665,7 @@ rolclr bss rolsiz
 ; 3/30/19 add microsurgeon, cars and carcasses, ti invaders, e.t. at sea.
 ; hoonos not random anymore.
 ; bugfixes: directional sprite, chomp sound
+;
+; 3/31/19 add title sequence. Delete out of bound sprites. Use PAD for music WS. Add Zero Zap. 
+
+https://youtu.be/Y5tM-xy7w4M

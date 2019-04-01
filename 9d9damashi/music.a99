@@ -192,6 +192,8 @@ PNDX EQU 12
 ; current dynamic level. this should be a register!
 DYN  data 16
 ;
+FAST data >46
+SLOW data >20
 DEL  data >46       ; the default value for tempo. >20 is neutral. 24 ticks is 24 * 1/60th second.
 SPC  data 0
 WSP  data 13
@@ -204,17 +206,18 @@ DYT  byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ; 4 voice player:
 ;MUSWS1 bss 32
 ;MUSWS2 bss 32
-;MUSWS3 bss 32
-;MUSWS4 bss 32
+MUSWS3 bss 32
+MUSWS4 bss 32
 MUSWS1 EQU >8320
 MUSWS2 EQU >8340
-MUSWS3 EQU >8360
-MUSWS4 EQU >8380
+; kscan during music = no go zone
+;MUSWS3 EQU >83A0
+;MUSWS4 EQU >83C0
 
 ; Reset voices and timers
-PLAY
+INIMUS
 	lwpi MUSWS1
-	li   NTP,VOICE1
+	li   NTP,0
 	li   PTS,PT0
 	li   ATS,NANA
 	clr  DUR
@@ -224,7 +227,7 @@ PLAY
 	li   PNDX,SATRB+8
 
 	lwpi MUSWS2
-	li   NTP,VOICE2
+	li   NTP,0
 	li   PTS,PT0
 	li   ATS,NANA
 	clr  DUR
@@ -234,7 +237,7 @@ PLAY
 	li   PNDX,SATRB+12
 
 	lwpi MUSWS3
-	li   NTP,VOICE3
+	li   NTP,0
 	li   PTS,PT0
 	li   ATS,CHORO
 	clr  DUR
@@ -254,6 +257,36 @@ PLAY
 	li   PNDX,SATRB+20
 		
 	lwpi VDPWS
+	rt
+	
+; restart the fugue	
+FUGUE 
+    lwpi MUSWS1
+	li   NTP,FUGUE3
+	li   ATS,ORGAN3
+    lwpi MUSWS2
+	li   NTP,FUGUE4
+	li   ATS,ORGAN3
+    lwpi MUSWS3
+	li   NTP,FUGUE5
+	li   ATS,ORGAN3
+	lwpi VDPWS
+	mov  @SLOW,@DEL
+	rt
+	
+; restart the nanana coda
+CODA
+    lwpi MUSWS1
+	li   NTP,VOICE1
+	li   ATS,NANA
+    lwpi MUSWS2
+	li   NTP,VOICE2
+	li   ATS,NANA
+    lwpi MUSWS3
+	li   NTP,VOICE3
+	li   ATS,CHORO
+	lwpi VDPWS
+	mov  @FAST,@DEL
 	rt
 	
 ; load a noise into channel 4, only if channel 3 is not in use

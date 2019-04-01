@@ -8,7 +8,6 @@ all: k2
 
 SRCS= \
     9d9damashi.a99 \
-    coda.a99 \
     hoonos.a99 \
     k2.a99 \
     kscan.a99 \
@@ -17,6 +16,8 @@ SRCS= \
     music.a99 \
     sprites.a99 \
 	title.a99 \
+    fugue.a99 \
+    coda.a99 \
 
 MAIN=k2.a99
 LIST=k2.lst

@@ -455,14 +455,15 @@ pr3:
  
  copy "9d9damashi.a99"
  copy "title.a99"
- copy "magellan.a99"
- copy "king/king.a99"
  copy "hoonos.a99"
  copy "music.a99"
- copy "coda.a99"
  copy "maze.a99"
  copy "kscan.a99"
  copy "sprites.a99"
+ copy "magellan.a99"
+ copy "king/king.a99"
+ copy "coda.a99"
+ copy "fugue.a99"
  copy "chardefs.a99"
  end
  

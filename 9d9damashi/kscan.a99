@@ -149,15 +149,22 @@ kpax9  b    *r10
 
 newbit data >2000
 
-anykey clr  r0
+anykey mov r11,r10
+any0   clr  r0
 	movb r0,@>8374      ; full keyboard mode
+; let music play
+	bl   @vsync
+    BLWP @MUSIC1
+	BLWP @MUSIC2
+	BLWP @MUSIC3
+
     blwp @kscan
 	movb @STATUS,r2
 	li   r8,>2000
 	coc  @newbit,r2          ; is it a new key
-	jne  anykey
+	jne  any0
 	movb @>8375,r0
-    rt
+    b  *r10
 	
 ; wait up to R2 ticks for a key	
 waitkey 
@@ -171,6 +178,11 @@ waitk2
 	coc  @newbit,r0          ; is it a new key
 	jeq  waitk3
 	bl   @vsync
+; let music play
+    BLWP @MUSIC1
+	BLWP @MUSIC2
+	BLWP @MUSIC3
+
 	dec  r2
 	jne  waitk2
 	clr  r0

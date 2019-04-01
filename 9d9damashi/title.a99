@@ -9,6 +9,13 @@
 ; munchman talks on this line
 mmln equ namtbl+>285
 
+; music playing step:
+muse
+	BLWP @MUSIC1
+	BLWP @MUSIC2
+	BLWP @MUSIC3
+	rt
+	
 title 
 * put character set in 2nd pat tbl, chars >80 to >be
  	li   r0,patasc2
@@ -29,6 +36,7 @@ title
     bl   @dramap
     data 0              ; map#	
 ; thunder! or fugue! or both!
+    bl   @fugue
 	bl   @waitkey
 	
 ; dialogue
@@ -53,6 +61,7 @@ title2
 	bl   @vmbw
 ; animate for 60 ticks
     bl   @vsync
+	bl   @muse
 	inc  r14
 	bl   @animm
     dec  @satrb
