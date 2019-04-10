@@ -84,8 +84,8 @@ check_key:
 ;
 ; general game keys player 1
 ; returns:
-;  r3 -1,0,1 for up/down
-;  r4 -1,0,1 for left/right
+;  r3 FF00,0,0100 for up/down
+;  r4 FF00,0,0100 for left/right
 ;  r5 -1     for fire or fire2
 ;  r6 -1,1   for - or +=  (speed)
 ;
@@ -108,22 +108,22 @@ kpax:
 kpax1  mov  @KEY_UP,r0
 	   bl   @check_key
 	   jeq  kpax2
-	   seto r3
+	   li   r3,>ff00
 	   
 kpax2  mov  @KEY_DN,r0
 	   bl   @check_key
 	   jeq  kpax3
-	   inc  r3
+	   li   r3,>0100
 
 kpax3  mov  @KEY_LT,r0     ; left
 	   bl   @check_key
 	   jeq  kpax4
-	   seto r4
+	   li   r4,>ff00
 
 kpax4  mov  @KEY_RT,r0     ; right
 	   bl   @check_key
 	   jeq  kpax5
-	   inc  r4
+	   li   r4,>0100
 
 kpax5  mov  @KEY_FI,r0
 	   bl   @check_key

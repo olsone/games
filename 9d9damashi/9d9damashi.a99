@@ -101,7 +101,9 @@ boxna1
 rolly1 data >5a00   ; top row (msb)
 rollx1 data >6800   ; left edge
 rollx2 data >9800   ; right edge
-rolwid data >3000
+rollc1 data >0d   ; left edge column
+rolwid data 6     ; width in columns
+
 
 mapx1  equ  >4000   ; left edge
 mapx2  equ  >b800   ; right edge - 8
@@ -116,6 +118,9 @@ mapx2  equ  >b800   ; right edge - 8
 ; let 'roller index' i mean the top pixel you see. if this is 0, it implies the next rollup goes in at i+ 3/4C
 ; or 3*75.4/4 = 56.55. +56. AND they have to go in in reverse. Bottom to top.
 
+;
+; initialize rolpat and rolclr
+;
 inirol li   r0,>f00f
        li   r1,>c300
 	   li   r2,rolsiz/3
@@ -125,8 +130,8 @@ iniro1 movb r1,*r3+
        movb r1,*r3+
        movb r1,*r3+
        movb r0,*r4+
-	   movb @VDPLB0,*r4+
-       movb r2,*r4+
+	   movb @R0LB,*r4+
+       movb r2,*r4+    ; 0
 	   dec  r2
 	   jne  iniro1
        rt	   
@@ -332,7 +337,7 @@ k2	limi 0
     bl   @inimus
 
 ; title branches to game
-    b    @title
+;    b    @title
 	
 game
 	; init music:
@@ -377,18 +382,29 @@ newrows:
 	
 ; start music:
     bl   @coda
+; init pat tbl for checkr
 
+    li   r0,pattbl+>400
+	li   r1,>f000
+	li   r2,>400
+	bl   @vmsw
+    li   r0,pattbl+>c00
+	li   r2,>400
+	bl   @vmsw
+; move ck1 into PAD
+    bl   @ckinit
+	
 loop
 
 ;  increase ticks
     inc  r14
-	; bl   @dracnt   ; draw all the counters to screen
+	bl   @dracnt   ; draw all the counters to screen
 
 ; music playing step:
-	BLWP @MUSIC1
-	BLWP @MUSIC2
-	BLWP @MUSIC3
-	BLWP @MUSIC4   ; noise uses channel 3
+;	BLWP @MUSIC1
+;	BLWP @MUSIC2
+;	BLWP @MUSIC3
+;	BLWP @MUSIC4   ; noise uses channel 3
 
 	inc  r9      ; advance roller index
 	ci   r9,rolnom
@@ -401,27 +417,30 @@ loop
 hoono	bl @aninew
 
     bl  @vsync     ; rasmus' test for vdp interrupt. call this before drawing, so vdp is in vertical retrace interval.
-
-; update sprites 
+	; 512 frames in 51 seconds with 2 vsync here.  10 fps or 6 ticks/frame
+	; 512 frames in 40 seconds with 1 vsync here.  12 fps or 5 ticks/frame. 
+	; 512 frames in 38 seconds with 0 vsync here.
+	
+; write sprite atr table
     li   r0,SPRATR
 	li   r1,satrb
 	li   r2,satrln
 	bl   @vmbw
-	
+
 ; boring bandwidth  - redefine character >80 only
 ;    bl   @checkz
 ; kinda boring blocky maze generator
-    bl   @dramaz
-	jmp  quick
+;    bl   @dramaz
+;	jmp  quick
 	
+
+
 ; full bandwidth, checkerboard pattern in playfield
-    li   r0,pattbl+>400
-	li   r1,>f000
-	li   r2,>400
-	bl   @vmsw
-    li   r0,pattbl+>c00
-	li   r2,>400
-	bl   @vmsw
+
+; color trick - detect if we run into the drawing period
+    li   r0,>8713
+    bl   @setvad	
+
  
 	li   r3,>af00
 	li   r4,>fa00
@@ -431,48 +450,75 @@ hoono	bl @aninew
 	li   r0,>4000+coltbl+>c00
 	bl   @setvad
     bl   @checkr
+; restore screen color
+	li   r0,>871e
+    bl   @setvad	
+
 quick   
 ; update roller patterns/colors (chars are already onscreen)
 	bl   @drarol
+
+;
+; keyboard actions
+;
 	
 	bl   @kpax
-	a    r6,@DEL
+	a    r6,@DEL      ; music tempo adjust
+
+* r4 left-right
+    movb @satrb+1,r1
+    movb @satrb+2,r2
+	andi r2,>f300
+    mov  r4,r4
+	jeq  nomove
+	jgt  right
+; r4=FF left move r2 += 8
+; r4=01 right move r2+=0
+    ai   r2,>0800
+right	
+    ab   r4,r1
+	cb   @rollx2,r1
+	jle  move1
+	cb   r1,@rollx1
+    jh   move2
+move1
+; at edge
+	sla  r4,3
+    ab   r4,@rollx1
+    ab   r4,@rollx2
+	mov  @rollx1,r0
+	swpb r0
+	srl  r0,3
+	mov  r0,@rollc1
 	
-	
+	ai   r0,namtbl+>180
+	mov  r0,@boxadr
+; redraw the lower half of playfield.. hm frame odd/even is wrong
+	 bl @boxnam
+     data namtbl+>108,>8000,>0810
+; draw in the roller
+     bl @boxnam
+boxadr data namtbl+>18d,>6800,>0306
+
+	 
+; fall into nomove because move is complete
+
+nomove
+* ensure MM is back at center X
+    li   r1,>7C00
+	li   r2,(munkch+4)*256
+move2
+    movb r1,@satrb+1
+    movb r2,@satrb+2	
+	movb r1,@satrb+5    ; background sprite
+	ai   r2,4
+	movb r2,@satrb+6
     jmp  next	
- 
-; check for a key with kscan
-kloop
-	clr  r0
-	movb r0,@>8374      ; full keyboard mode
-    blwp @kscan
-	movb @STATUS,r2
-	li   r8,>2000
-	coc  r8,r2
-	jne  next
-	; jmp next
-; on key... reset music
-    clr  r2
-	movb @>8375,r2
-	ci  r2,'+'*256
-	jeq tmpoup
-	ci  r2,'='*256
-	jeq tmpoup
-	ci  r2,'-'*256
-    jeq tmpodn	
-	; any other key, start over
-    bl   @coda
-	jmp  next
-tmpoup
-    inct @DEL
-	jmp  next
-tmpodn	
-	dect @DEL
-	
+ 	
 next b @loop
 
 
-
+* screen tests
 * ckini1 - set up boring 8 chardefs of checks in 8 scrolled row positions
 checks 
  data >f0f0,>f0f0,>0f0f,>0f0f
@@ -560,15 +606,8 @@ checkz
 	
 ; full bandwidth, supposedly optimized vdp blitter.
 ; fill all the bytes that would be written if the whole field had been calculated.
-checkr
-	li   r2,>80  ; loops 
-	mov  r9,r0
-	neg  r0
-	andi r0,7
-	sla  r0,1
-	ai   r0,ck1
-	b    *r0     ; jump into partial move
-	
+; move this routine to >8380	
+padck1 equ >8380
 ck1	movb r3,*vd
 	movb r3,*vd
 	movb r3,*vd
@@ -579,13 +618,34 @@ ck1	movb r3,*vd
 	movb r4,*vd
 	dec  r2
 	jne  ck1
+	b    @ck2
+ck1$
+
+ckinit
+; move code into pad. call this once.
+    li   r0,padck1
+	li   r1,ck1
+	li   r2,(ck1$-ck1)
 	
+ck0 mov  *r1+,*r0+
+    dec  r2
+	jne  ck0
+
+checkr	
+	li   r2,>80  ; loops 
 	mov  r9,r0
+	neg  r0
+	andi r0,7
+	sla  r0,1
+	ai   r0,padck1
+	b    *r0     ; jump into partial move
+	
+ck2	mov  r9,r0
 	neg  r0
 	andi r0,7
 	jeq  ck3
 ; partial last char causes all the trouble. we could wrap but clobbering 0 would look awful.
-ck2	movb r3,*vd
+    movb r3,*vd
     dec r0
 	jeq ck3
 	movb r3,*vd
@@ -607,11 +667,6 @@ ck2	movb r3,*vd
 
 ck3 rt
 	
-
- 
-welcom text '9d9damashi'
-    byte 0
-
 
 ; buffer for rolled up things. roller appears 3x6 but is 75 pixels by 48 texture. 
 ; useful to have aliased copy of 31 more pixels, giving total of 106 pixels deep.

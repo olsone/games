@@ -432,36 +432,5 @@ animm2
 ; munchman moves to the opposite side, starts "pushing"
 ; count ticks to get to the actual move.
 ; for instance, from 777c  y,x to right edge 68 to 98, really 90
-mchrrt  byte munkch
-mchrlf  byte munkch+8
 
-munkey
-    li   sptr,satrb
-	
-	mov  r4,r4
-	jeq  munke3
-	jgt  munke1
-    inc  *sptr
-	inc  @4(sptr)
-	cb   *sptr,@rollx2
-	jeq  munke4
-	movb @mchrlf,@2(sptr)
-	rt
-munke1	
-    dec  *sptr
-	dec  @4(sptr)
-	cb   *sptr,@rollx2
-	jeq  munke4
-	movb @mchrrt,@2(sptr)
-munke3
-    rt
-; reached edge - move the roller
-munke4
-; reset mm
-    mov @rolwid,r0
-    ai  r0,>f800
-	srl r0,1
-    ab  @rollx1,r0
-    movb r0,*sptr
-	
-	rt
+    

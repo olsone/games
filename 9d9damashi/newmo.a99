@@ -1,0 +1,144 @@
+
+; choose a new movement for the hoono
+;
+; moveho
+;   caller:
+;  hoono#  r4 hootbl ptr (hoono#)
+;  moptr   r5 ptr into motion
+;  sptr    r6 sptr into satrb
+;
+; please call rng first if you want this to be random.
+;
+; r0
+; r1 scrtch
+; r2
+; r3
+;
+; r7 constant >0700
+;
+; compute r0 ptr into chrbuf, from sprite pos
+; x/8 + chrwid*(mazrow + y)/8
+;
+moveho
+movho0
+; sprite x -> char column in r2 
+; TODO  this must be adjusted if the screen windows
+; TODO there's some optimization left here
+    clr  r1
+	movb *sptr,r1   ; y,0.  note: y can be negative at first (offscreen) but y+mazrow >0
+	ab   @mazrow+1,r1
+    swpb r1        ; 0,y
+	
+	li   r7,>0700
+    szc  r7,r1  ; mask off x; should be unnecessary
+	srl  r1,3   ; divide by 8
+    	
+; assuming chrwid is 18, shift/add to mpy by 18:
+    mov  r1,r0
+    sla  r0,3
+	a    r1,r0
+    sla  r0,1
+
+    ai   r0,chrbuf
+; x/8
+	mov  *sptr,r1   ; y,x
+	andi r1,>ff
+	srl  r1,3
+	
+	a   r1,r0
+	
+; r0 ready
+	
+   
+
+; useful entry point if r0 already set
+movho1
+; find the location?
+; in newho, r2 was the column 0-N
+; here r2 is the pointer into chrbuf
+    mov  r13,r1
+    andi r1,>f          ; this is actually less than chrwid
+
+	li   r7,>7e00
+
+    clr  *moptr
+; check for stationary
+    mov  *hoono#,r1
+	srl  r1,1
+	joc  newho6
+	
+	
+; registers below:	
+; r1 random direction*2
+	mov  r13,r1
+	andi r1,6
+; does it give?
+newho4
+	mov  @mazdir(r1),r0
+
+	
+	movb *r0,r3
+	czc  r7,r3
+	jeq  newho5  ; good dir
+    inct r1
+    ci   r1,16
+    jlt  newho4  ; by going up to 8 tries, we cycle through all the
+; possibilities, while allowing there might be bugs in the maze code.
+
+; give up:
+    ai   moptr,4
+	jmp  newho6
+newho5
+; how far does it go in a straight line?
+    a    @eight,*moptr
+	a    @mazdir(r1),r0
+	movb *r0,r3
+	czc  r7,r3
+	jeq  newho5  ; go one more square. bug: it can wrap around
+    inct moptr
+	mov  @dirs(r1),*moptr+
+newho6	
+; populate sprite atr    	
+    ; x
+	ai   r2,8
+	sla  r2,3
+    
+	mov  @mazrow,r3    ; screen pixel of [tile row 3] is 15 into the buffer
+	neg  r3
+	ai   r3,14         ; recall top of screen is sprite row FF
+	andi r3,>ff
+	swpb r3
+	a    r2,r3         ; add in the x
+	mov  r3,*sptr+
+	s    r2,r3         ; clear the x for next loop. is szc faster? 
+	
+; hoono char and color
+	mov  r13,r0
+	andi r0,>c         ; 0,4,8,12
+	mov  @offcolor(hoono#),r2
+	src  r2,0
+	andi r2,>f         ; select a random nybble
+; starting char
+    ab   @offchr(hoono#),r2
+; check for directional
+    mov  *hoono#,r0
+	srl  r0,2
+	jnc  nospin
+; add direction/2 to char
+    andi r1,7
+	sla  r1,7
+    a    r1,r2
+	jmp  newho7
+nospin	
+; add a random frame count
+	mov  r13,r0
+	movb @offchr+1(hoono#),r1
+	ai   r1,>ff00
+	sb   r2,r1        ; # of frames/sprite
+	jeq  newho7       ; else r1 is a mask like 1,3,7
+    szc  r13,r1       ; clear some random bits
+	ab   r1,r2        ; add some random frames so they don't all start alike
+newho7    
+	; TODO: use offflg size2
+	mov  r2,*sptr+
+    

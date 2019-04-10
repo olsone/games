@@ -24,6 +24,8 @@ chrhgt equ  21
 chrsiz equ  chrwid*chrhgt
 chrbuf bss  chrsiz  ; chars for maze
 
+
+
 ;
 ;
 ; NEWROW
@@ -281,7 +283,7 @@ dramz0:
 	   mov  @mazrow,r2
 	   li   r7,7
 	   czc  r7,r2        ; test the lower 3 bits for all zeros
-	   jne  dramz5       ; no, skip namtbl update 
+	   jne  dramzx       ; no, skip namtbl update 
 	   ; draw namtbl on 24,16,8
 	   li   r7,>8
 	   dec  r2
@@ -292,7 +294,12 @@ dfrod  li   r7,>0400     ; char offset for odd frame chars
 dfrev  clr  r7
 dfrrd
 ; r7 is the bits to add to a char for odd frames
-
+       
+       mov  @rollc1,r5   ; r5 will be the loop cnt at which to jump over the roller
+       dect r5
+	   
+	   mov  r5,r6
+       ai   r6,-5	     ; remember r2 counts down
 ; update namtbl
 	   li   r0,>4000+namtbl+8-32    ; row loop pre-adds 32
 	   bl   @setvad
@@ -306,40 +313,44 @@ dramzl ai   r1,chrwid        ; mazrow 8-15 one loop, 16-23 two loops, 24 three l
 	   jne  dramzl
 	   
 dramz1 li   r3,16            ; outer loop
-dramz2 ai   r0,32
+dramz2 ai   r0,16
 	   li   r2,16            ; inner loop
 ; update r1
        s    r2,r1
 	   ai   r1,chrwid
   	   bl   @setvad
-dramz3 movb *r1+,r4
+dramz3 
+       movb *r1+,r4
        ab   r7,r4            ; add odd frame offset
-	   movb r4,*vd
-; carve out a hole for the roller
-       ci   r3,4
+
+; carve out a hole for the roller?
+       ci   r3,4             ; remember this counts down
 	   jgt  dramz4
 	   ci   r3,1
 	   jeq  dramz4
-	   ci   r2,12
+; rows 4,3,2
+	   c    r2,r5   ; was ci r2,12
 	   jgt  dramz4
-	   ; after 12
-	   ci   r2,6
+	   c   r2,r6
 	   jlt  dramz4
 	   ; skip 6 spaces
-	   ai   r0,5+6
+	   ai   r0,6           ; rolwid somehow
 	   bl   @setvad
-	   ai   r0,-(5+6)
-	   ai   r2,-6
-	   ai   r1,6
 	   
-dramz4 dec  r2
+	   ai   r2,-6
+	   jmp  dramz5
+	   
+dramz4 movb r4,*vd
+	   	   
+dramz5 inc  r0
+       dec  r2
 	   jne  dramz3
 	   
 	   dec  r3
 	   jne  dramz2
 	   
 ; prepare for next
-dramz5  
+
 	   
 dramzx dec  @mazrow
 	   jne  dramzz

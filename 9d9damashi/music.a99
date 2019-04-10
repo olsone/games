@@ -208,9 +208,10 @@ DYT  byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ;MUSWS2 bss 32
 MUSWS3 bss 32
 MUSWS4 bss 32
+
 MUSWS1 EQU >8320
 MUSWS2 EQU >8340
-; kscan during music = no go zone
+; kscan during music on title screen = no go zone
 ;MUSWS3 EQU >83A0
 ;MUSWS4 EQU >83C0
 

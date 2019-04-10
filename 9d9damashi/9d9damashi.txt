@@ -344,3 +344,125 @@ title screen
 new move (run away from you?)
 roller left right
 roller size
+
+I measure how fast I can blast 4k of bitmap data, covering 1 frame of a 16x16 bitmap. I store the pattern and color in chars 00-7F for one frame.
+
+checkr is a routine that blasts a 4x4 checkerboard pattern into the color table with a scrolled offset of 0-7. Registers are in PAD.
+
+* Timing
+Full blast 4k. Pat tbl all >F0 with vmsw 2k, color table with checkr 2k. All in CPU RAM. Music playing.
+
+	; 512 frames in 51 seconds with 2 vsync waits in a row.  10 fps or 6 ticks/frame
+	; 512 frames in 40 seconds with 1 vsync wait.  12 fps or 5 ticks/frame. 
+	; 512 frames in 38 seconds with 0 vsync wait. Still around 5 ticks.
+
+half blast 2k. color table only	with checkr.
+
+    ; 512 frames in 24 seconds. 21 fps or 3 ticks/frame.
+
+half blast 2k. Inner loop of checkr in PAD.
+    ; 512 frames in 21 seconds. 25 fps or 2-3 ticks/frame.
+	
+no music
+	; 512 frames in 17 seconds. 30 fps. 2 ticks/frame.
+	
+Cycle Analysis of checkr: T(a73e-a794)
+
+	N    Cy  N*Cy
+	1024 26 26624 movb r4,*r15 (8 movb per unrolled loop)
+	 128 10  1280 dec r2
+	 128 10  1280 jne 
+            =====
+			29184
+			
+	average cycles in checkr: 30352
+    Times two, or 60700 cycles.
+
+	movb r4,@VDPWD takes 30 cycles. Slower than movb r4,*r15. Adds 4096 cycles.
+	
+	
+	Time to move code into pad:
+	60 + 20*(38+14+14) = 1380
+	So do this once.
+	
+
+; full bandwidth, supposedly optimized vdp blitter.
+; fill all the bytes that would be written if the whole field had been calculated.
+; move this routine to >8380	
+padck1 equ >8380
+ck1	movb r3,*vd
+	movb r3,*vd
+	movb r3,*vd
+	movb r3,*vd
+	movb r4,*vd
+	movb r4,*vd
+	movb r4,*vd
+	movb r4,*vd
+	dec  r2
+	jne  ck1
+	b    @ck2
+ck1$
+
+ckinit
+; move code into pad. call this once.
+    li   r0,padck1
+	li   r1,ck1
+	li   r2,(ck1$-ck1)
+	
+ck0 mov  *r1+,*r0+
+    dec  r2
+	jne  ck0
+
+checkr	
+	li   r2,>80  ; loops 
+	mov  r9,r0
+	neg  r0
+	andi r0,7
+	sla  r0,1
+	ai   r0,padck1
+	b    *r0     ; jump into partial move
+	
+ck2	mov  r9,r0
+	neg  r0
+	andi r0,7
+	jeq  ck3
+; partial last char causes all the trouble. we could wrap but clobbering 0 would look awful.
+    movb r3,*vd
+    dec r0
+	jeq ck3
+	movb r3,*vd
+    dec r0
+	jeq ck3
+	movb r3,*vd
+    dec r0
+	jeq ck3
+	movb r3,*vd
+    dec r0
+	jeq ck3
+	movb r4,*vd
+    dec r0
+	jeq ck3
+	movb r4,*vd
+    dec r0
+	jeq ck3
+	movb r4,*vd
+
+ck3 rt
+
+Further investigation:
+
+Moving data from a buffer in CPU RAM will be a large hit.
+
+Since at best 2k takes 2 ticks, even 6 ticks for 4k, page flipping will be essential. I will have to 
+break up the blitting into sections, as Rasmus suggested. Perhaps doing other processing in between (though there is only a finite amount of processing to do per frame. sprites move at most 1 pixel per frame.)
+
+While I would like to have full bitmap scrolling, other ideas are:
+
+1. My current scheme is 2 tiles, with 2*2 permutations (space above space, space above block, block above space, block above block). There are two frames. On each tick, I update 4 patterns in the next frame, then update the SIT. Total 32+256 bytes.
+
+2. Idea. Making the background out of only 5 tiles, with all permutations of 5*5*8 stored in the pattern/color table. Then to update the frame, write 256 bytes of SIT (in 16 rows of 16.) This is still awfully limiting. Total 256 bytes.
+
+3. Idea. Have 11 tiles, and update all 11*11 permutations for a frame. Write SIT. Total 2.5k.
+
+4. Reduce the scrolling area width or height.
+

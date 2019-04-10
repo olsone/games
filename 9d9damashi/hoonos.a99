@@ -45,7 +45,20 @@ offstr equ 6
 
 hootbl
 
-	  
+	 ; Cars and Carcasses II (Not Polyoptics). when was there ever a I?
+; Was the inspiration for this mashup.
+; The Not Polyoptics lineup were distribued by TI on cassette/disk very early on.
+      data >0002,>c4c8,>ffff
+	  data zstr25            ; white car (directional)
+      data >0001,>c8c9,>6666 ; stationary zombie
+      data zstr26
+      data >0001,>c9ca,>4444 ; stationary monster
+      data zstr27
+      data >0001,>cacb,>1111 ; stationary vampire
+      data zstr28
+      data >0001,>cbcc,>2ccc ; stationary tree
+      data zstr29
+ 
 ; pinwheel / kazaguruma
       data >0100,>0008,>c84d ; dk green, md red, dk blue, magenta
       data zstr00  
@@ -123,19 +136,6 @@ hootbl
       data >0100,>b4b6,>cccc ; martian b4-b5
       data zstr22
 
-; Cars and Carcasses II (Not Polyoptics). when was there ever a I?
-; Was the inspiration for this mashup.
-; The Not Polyoptics lineup were distribued by TI on cassette/disk very early on.
-      data >0002,>c4c8,>ffff
-	  data zstr25            ; white car (directional)
-      data >0001,>c9ca,>6666 ; stationary zombie
-      data zstr26
-      data >0001,>c9ca,>4444 ; stationary monster
-      data zstr27
-      data >0001,>c9ca,>1111 ; stationary vampire
-      data zstr28
-      data >0001,>c9ca,>2ccc ; stationary tree
-      data zstr29
 
 ; chisholm trail / texas(munchman)
       data >0001,>c3c4,>4444 ; texas
